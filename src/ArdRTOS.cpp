@@ -7,7 +7,5 @@
 #include "ArdRTOS.h"
 
 //! GLOBAL VARIABLES BEGIN
-volatile struct Task tasks[MAX_TASK_COUNT];
-// there will always be at least one task, the idle task
-volatile uint8_t num_tasks = 0;
+Sceduler OS;
 //! GLOBAL VARIABLES END

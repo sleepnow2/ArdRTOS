@@ -8,9 +8,10 @@
 
 //! OS TIMER ISR DEFINITIONS BEGIN
 #define SCEDULER_MASK_REG 		    TIMSK0
-#define SCEDULER_OVF_REG            OCR1A
+#define SCEDULER_OVF_REG            OCR0A
 
-#define SCEDULER_VECT               TIMER1_COMPA_vect
+#define SCEDULER_VECT               TIMER0_COMPA_vect
+#define SCEDULER_VECT_NUM			TIMER0_COMPA_vect_num
 
 #define SCEDULER_MASK_BIT	        OCIE0A
 
@@ -31,7 +32,7 @@
  * 
  * @param curr_sp the uint16_t variable that will hold the stack pointer after these opperations are done
  */
-#define OS_SaveContext(curr_sp) \
+#define OS_SaveContext() \
     asm volatile(\
 		" PUSH	r0  \n\t"\
 		" push  r1  \n\t"\
@@ -69,8 +70,7 @@
 		" IN	r0, __SREG__	\n\t"\
 		" PUSH	r0				\n\t"\
 		);\
-		/* write stack pointer to a uint16_t var given in the macro parameter */\
-		curr_sp=SP
+		/* write stack pointer to a uint16_t var given in the macro parameter */
 #pragma endregion
 #pragma region LOAD_CONTEXT
 
@@ -79,8 +79,7 @@
  * 
  * @param curr_sp the stack pointer that currently contains the address of the stack that is to be restored.
  */
-#define OS_LoadContext(curr_sp) \
-	SP = curr_sp;\
+#define OS_LoadContext() \
     asm volatile(\
         /* load the special flags from off of the stack */\
 		" POP	r0"			"\n\t"\

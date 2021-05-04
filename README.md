@@ -25,11 +25,11 @@ ___
     - [ ] get cooporative OS to work by relinquishing controll of tasks.
     - [ ] get preemptive OS to work by using
 - [ ] (beta) get intra task communication and syncronization
-    - no matter what RTOS you use, there is always some kind of 
+    - no matter what RTOS you use, there is always some kind of classes or helper functions to handle intra task communication and Syncronization.
     - [ ] queues
     - [ ] semaphores
 - [ ] (1.0) generate documentation and examples
-    - [ ] add an array of features like stack overflow detection (not the __good__ type of stack overflow, the __bad__ type of stack overflow.)
+    - [ ] add an array of features like stack overflow detection with bug report(not the __good__ type of stack overflow, the __bad__ type of stack overflow.)
         - [ ] manual
         - [ ] automatic (include into kernel)
     - [ ] dyoxygen documentation for entire project
