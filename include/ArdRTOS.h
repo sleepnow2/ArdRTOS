@@ -32,9 +32,7 @@ typedef void (osFuncCall)(void);
 #endif // !MAX_TASK_COUNT
 
 //! INCLUDES BEGIN
-#include "port.h"
 #include "kernel/init.h"
-#include "data_structures/init.h"
 //! INCLUDES END
 
 extern Sceduler OS;
