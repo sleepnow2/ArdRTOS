@@ -1,13 +1,5 @@
-#include "kernel/task.h"
+#include "kernel/Task.h"
 
-/**
- * @brief Construct a new task::task object. this is responsible for holding tasks 
- */
-Task::Task(void) 
-{
-    _set = NULL;
-    _loop = NULL;
-}
 Task::Task(osFuncCall &l)
 {
     _set = NULL;
@@ -28,12 +20,10 @@ void Task::setLoop(osFuncCall &l)
 }
 void Task::begin()
 {
+    // this is in the same manor of an arduino program.
     if(_set) 
         _set();
-    if(_loop) {
-        while(1) {
-            _loop();
-        }
+    while(1) {
+        _loop();
     }
-    
 }

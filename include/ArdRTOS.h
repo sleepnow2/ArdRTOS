@@ -18,11 +18,6 @@ typedef void (osFuncCall)(void);
 
 #define NAKED __attribute__((naked))
 #define NOINLINE __attribute__((noinline))
-#define WEAK __attribute__((weak))
-#define NOOP __attribute__((optimize("-Os")))
-
-#define TASK_NOOP __attribute((naked, noinline, optimize("-0s")))
-#define TASK __attribute__((noinline))
 
 #ifndef MAX_TASK_COUNT
     #define MAX_TASK_COUNT 8
@@ -32,7 +27,8 @@ typedef void (osFuncCall)(void);
 #endif // !MAX_TASK_COUNT
 
 //! INCLUDES BEGIN
-#include "kernel/init.h"
+#include "kernel/init"
+#include "datatypes/init"
 //! INCLUDES END
 
 extern Sceduler OS;

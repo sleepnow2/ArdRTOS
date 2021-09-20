@@ -1,8 +1,8 @@
 #ifndef __KERNEL_INIT_H__
 #define __KERNEL_INIT_H__
 
-#include "kernel/task.h"
-#include "kernel/sceduler.h"
+#include "kernel/Task.h"
+#include "kernel/Sceduler.h"
 
 
 #endif // !__KERNEL_INIT_H__

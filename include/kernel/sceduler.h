@@ -35,7 +35,7 @@ Y88b. .d88P Y88b  d88P        Y88b  d88P 888  888  Y8bd8P  Y8b.     Y88b  d88P Y
  * 
  * @param curr_sp the uint16_t variable that will hold the stack pointer after these opperations are done
  */
-#define OS_SaveContext(sp_address) \
+#define __OS_SaveContext(sp_address) \
     asm volatile(\
 		" PUSH	r0  \n\t"\
 		" push  r1  \n\t"\
@@ -71,6 +71,7 @@ Y88b. .d88P Y88b  d88P        Y88b  d88P 888  888  Y8bd8P  Y8b.     Y88b  d88P Y
 		" PUSH	r31 \n\t"\
 		" IN	r0, __SREG__	\n\t"\
 		" PUSH	r0				\n\t"\
+		" WDR 					\n\t"\
 	);\
 	asm volatile(\
         /* save the current flag register to stack */\
@@ -102,7 +103,7 @@ Y88b. .d88P Y88b  d88P         888     Y88..88P 888  888 Y88b 888 Y88b  d88P Y88
  * 
  * @param curr_sp the stack pointer that currently contains the address of the stack that is to be restored.
  */
-#define OS_LoadContext(sp_address) \
+#define __OS_LoadContext(sp_address) \
     asm volatile(\
         /* load the special flags from off of the stack */\
 		" lds   r26, [" #sp_address "]			 \n\t"\
@@ -161,7 +162,7 @@ Y88b. .d88P Y88b  d88P        Y88b  d88P 888            888    Y88b  d88P 888
  "Y88888P"   "Y8888P" 88888888 "Y8888P"  8888888888     888     "Y8888P"  888
 */
 
-#define OS_SetSP(sp_address)\
+#define __OS_SetSP(sp_address)\
 	asm volatile(\
 		"lds  r26, [" #sp_address "]	\n\t"\
 		"lds  r27, [" #sp_address "]+1	\n\t"\
@@ -170,7 +171,7 @@ Y88b. .d88P Y88b  d88P        Y88b  d88P 888            888    Y88b  d88P 888
 		"ld   r0, x+					\n\t"\
 		"out  __SP_H__, r0				\n\t"\
 		:\
-		: [sp_tmp] "m" (sp_address)\
+		: [sp_address] "m" (sp_address)\
 		: "r0", "r26", "r27"\
 	)
 
@@ -194,15 +195,58 @@ public:
      * @param stackSize how much memory you are going to use for this task
      */
     void addTask(Task &task, uint16_t stackSize);
+	/**
+     * @brief Create a task to be run, prepare the memory, and 
+     * 
+     * @param loop the loop function to use
+     * @param stackSize how much memory you are going to use for this task
+     */
+    void addTask(osFuncCall &loop, uint16_t stackSize);
+	/**
+     * @brief Create a task to be run, prepare the memory, and 
+     * 
+     * @param setup the setup function to call before doing loop
+	 * @param loop the loop function to use
+     * @param stackSize how much memory you are going to use for this task
+     */
+    void addTask(osFuncCall &setup, osFuncCall &loop, uint16_t stackSize);
 
     /**
      * @brief begins ArdRTOS after tasks asigned.
      */
     void begin();
 
+	/**
+	 * @brief calls the context switcher to move onto the next task
+	 * 
+	 */
 	void yield();
 
+	/**
+	 * @brief untill the amount time spesified passes, it calls the context switcher.
+	 * 
+	 * @param ms how long to wait
+	 */
 	void delay(uint32_t ms);
+
+	/**
+	 * @brief untill the time spesified approaches, it calls the context switcher.
+	 * 
+	 * @param ms the time to wait till
+	 */
+	void delay_untill(uint32_t ms);
+
+	/**
+	 * @brief enables the sceduler ISR
+	 * 
+	 */
+	void enable();
+
+	/**
+	 * @brief dissables the sceduler ISR without dissabling the rest of interrupts as a whole.
+	 * 
+	 */
+	void dissable();
 };
 
 #endif /* SCEDULER_H_ */

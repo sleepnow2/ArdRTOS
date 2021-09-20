@@ -9,15 +9,15 @@
 ___
 ## __Introduction__
 ### __Who are you and what have you done with my RTOS!?!__
-    My name is Alex Olson, and don't worry... your pressious little RTOS still exists. I just made it... prettier.
+My name is Alex Olson, and don't worry... I haven't touched your presious little RTOS.
 ### __Why ArdRTOS?__
-    while taking a class in college about freeRTOS, I realized that there were some simplifications that I could make to the API in accessing freeRTOS. Thus, I decided to make this! hopefully, this turns out to be a simpler, less bloated, more intuitive RTOS for use by both proffessionals and ametures alike.
+while taking a class in college about freeRTOS, I realized that there were some simplifications that I could make to the API in accessing freeRTOS. Thus, I decided to make this! hopefully, this turns out to be a simpler, less bloated, more intuitive RTOS for use by both proffessionals and ametures alike.
 ### __What makes this different from FreeRTOS?__
-    This is different in that this RTOS takes away some features of FreeRTOS in a strategic way in order to reduce the number of mistakes possible while keeping things intuitive.
-    tasks no longer need handles. queues are classes, semaphores are objects, and the sceduler is a class that is handled in a similar and familiar way as to using Serial or Wire.
+This is different in that this RTOS takes away some features of FreeRTOS in a strategic way in order to reduce the number of mistakes possible while keeping things intuitive.
+tasks no longer need handles. queues are classes, semaphores are objects, and the sceduler is a class that is handled in a similar and familiar way as to using Serial or Wire.
 ____
 ## __How do I use it?__
-    TODO: insert a link to example projects here
+TODO: insert a link to example projects here
 ___
 ## __what is in the future?__
 - [ ] (alpha) get the kernel working
@@ -44,9 +44,9 @@ ___
 
     And like always... we are squashing bugs and taking suggestions at every turn
 ### __How can I contribute?__
-    currently, this is under private development as a senior project out of Bradley University by a lowly ECE major student. so untill the project is done, no contributions by members outside of the senior project for obvious reasons.
+currently, this is under private development as a senior project out of Bradley University by a lowly ECE major student. so untill the project is done, no contributions by members outside of the senior project for obvious reasons.
 
-    once this senior project is done, I will release this for open source contribution to go the way of Linux, FreeRTOS, Python, FireFox, and Blender.
+once this senior project is done, I will release this for open source contribution to go the way of Linux, FreeRTOS, Python, FireFox, and Blender.
 - for those who have a burning desire to help
     - you can contribute by submitting code, examples, comments, and helping people understand this peice of middleware which you now use for whatever reason that you use it.
     - you can directly contribute by making port files for different microcontrollers so that we can spread our support for a vast array of microcontrollers for everyone and any project.
