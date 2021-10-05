@@ -3,7 +3,7 @@
 
 #include "Mutex.h"
 
-extern Sceduler OS;
+extern Scheduler OS;
 
 /** 
  * this is here so that we can use as little data as possible in this datatype.
@@ -91,11 +91,11 @@ public:
      */
     T dequeue(uint64_t timeout);
 
-    T peek() {LockGuard l(_m); return _data[_back];};
+    T peek() {LockGuard l(_m); return _data[_back];}
 
-    IT size() {return _count;};
-    bool isEmpty() {return _count == 0;};
-    bool isFull() {return _count == i;};
+    IT size() {return _count;}
+    bool isEmpty() {return _count == 0;}
+    bool isFull() {return _count == i;}
 };
 
 template<typename T, unsigned int i, typename IT>

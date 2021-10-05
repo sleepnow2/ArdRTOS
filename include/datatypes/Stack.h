@@ -3,7 +3,7 @@
 
 #include "Mutex.h"
 
-extern Sceduler OS;
+extern Scheduler OS;
 
 /** 
  * this is here so that we can use as little data as possible in this datatype.

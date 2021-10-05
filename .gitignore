@@ -1,2 +1,6 @@
 .pio
+.vs
 .vscode
+Serial_Input_Plotter.py
+platformio.ini
+test

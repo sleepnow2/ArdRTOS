@@ -7,5 +7,5 @@
 #include "ArdRTOS.h"
 
 //! GLOBAL VARIABLES BEGIN
-Sceduler OS;
+Scheduler OS;
 //! GLOBAL VARIABLES END

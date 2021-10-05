@@ -1,16 +1,17 @@
 #include "ArdRTOS.h"
 
-extern Sceduler OS;
-extern volatile uint8_t __sceduler_curr_task;
+extern Scheduler OS;
+extern volatile uint8_t curr;
 
 Mutex::Mutex() : _lock(true) , _locking_task(UINT8_MAX) {};
 
 void Mutex::lock() {
     // interrupts are not alloud while mutexes are being sorted out
-    interrupts();
+    noInterrupts();
     // this is to prevent double locking one mutex from one task;
-    if(_locking_task == __sceduler_curr_task)
+    if(_locking_task == curr) {
         return;
+    }
     // attempt to lock forever;
     while (!_lock) {
         OS.yield();
@@ -22,7 +23,7 @@ void Mutex::lock() {
     // update lock
     _lock = false;
     // update locking task
-    _locking_task = __sceduler_curr_task;
+    _locking_task = curr;
     // return, enabling interrupts too
     interrupts();
 }
@@ -33,7 +34,7 @@ bool Mutex::lock(uint64_t timeout) {
     noInterrupts();
 
         // this is to prevent double locking one mutex from one task;
-    if(_locking_task == __sceduler_curr_task) {
+    if(_locking_task == curr) {
         interrupts();
         // this true signifies that you already have the lock... dumbass...
         return true;
@@ -52,7 +53,7 @@ bool Mutex::lock(uint64_t timeout) {
         // update lock
     _lock = false;
     // update locking task
-    _locking_task = __sceduler_curr_task;
+    _locking_task = curr;
     // enable interrupts
     interrupts();
     // return successful lock
@@ -63,13 +64,13 @@ bool Mutex::lockImmediate() {
     // interrupts are not alloud while mutexes are being sorted out
     noInterrupts();
     // this is to prevent double locking one mutex from one task;
-    if(_locking_task == __sceduler_curr_task) {
+    if(_locking_task == curr) {
         interrupts();
         return true;
     }
     if(_lock) {
         _lock = false;
-        _locking_task = __sceduler_curr_task;
+        _locking_task = curr;
         interrupts();
         return true;
     } else {
