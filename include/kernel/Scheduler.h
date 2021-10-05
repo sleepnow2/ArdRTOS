@@ -26,7 +26,7 @@ public:
      * @param loop the loop function to use
      * @param stackSize how much memory you are going to use for this task
      */
-    void addTask(osFuncCall &loop, uint16_t stackSize);
+    void addTask(osFuncCall &loop, unsigned stackSize=0x40, unsigned char priority=1);
 
     /**
      * @brief begins ArdRTOS after tasks are asigned in preemptive mode
@@ -54,14 +54,14 @@ public:
 	 * 
 	 * @param ms how long to wait
 	 */
-	void delay(uint32_t ms);
+	void delay(unsigned long ms);
 
 	/**
 	 * @brief untill the time spesified approaches, it calls the context switcher.
 	 * 
 	 * @param ms the time to wait till
 	 */
-	void delay_untill(uint32_t ms);
+	void delayUntill(unsigned long ms);
 
 	/**
 	 * @brief enables the sceduler ISR
@@ -74,6 +74,45 @@ public:
 	 * 
 	 */
 	void dissable();
+
+	/**
+	 * @brief fetches the taskID of the currently running task
+	 * 
+	 * @return uint8_t 
+	 */
+	TaskID getTaskID();
+
+	/**
+	 * @brief Set the Priority for the currently running task
+	 * 
+	 * @param char how many timeslots you want this task to take up
+	 */
+	void setPriority(unsigned char);
+
+	/**
+	 * @brief Set the Priority for another task
+	 * 
+	 * @param TaskID the task to set priority of
+	 * @param char the priority you want to set that task to
+	 */
+	void setPriority(TaskID taskID, unsigned char priority);
+
+	friend class Semaphore;
+	friend class Mutex;
+private:
+	/**
+	 * @brief gives your priority to another task
+	 * 
+	 * @param taskID the task you wish to donate too
+	 */
+	void donatePriority(TaskID taskID);
+	
+	/**
+	 * @brief resets the priority of the currently running task
+	 * 
+	 */
+	void resetPriority();
+
 };
 
 #endif /* SCHEDULER_H_ */

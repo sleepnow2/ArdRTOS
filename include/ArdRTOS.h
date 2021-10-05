@@ -15,6 +15,7 @@
 #include <Arduino.h>
 
 typedef void (osFuncCall)(void);
+typedef unsigned char TaskID;
 
 #define NAKED __attribute__((naked))
 #define NOINLINE __attribute__((noinline))
@@ -29,9 +30,10 @@ typedef void (osFuncCall)(void);
 
 //! INCLUDES BEGIN
 #include "kernel/init.h"
+extern Scheduler OS;
 #include "datatypes/init.h"
 //! INCLUDES END
 
-extern Scheduler OS;
+
 
 #endif // __ARDRTOS_H__

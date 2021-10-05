@@ -1,10 +1,6 @@
 #ifndef __DATATYPES_STACK_H__
 #define __DATATYPES_STACK_H__
 
-#include "Mutex.h"
-
-extern Scheduler OS;
-
 /** 
  * this is here so that we can use as little data as possible in this datatype.
  * what happens is that the datatype used to index the queue will always be the smallest 
@@ -28,11 +24,11 @@ namespace __DATATYPES_STACK_HELPER__ {
 }
 
 
-template<typename T, unsigned int i, typename IT = typename __DATATYPES_STACK_HELPER__::Index<(i<UINT8_MAX),(1<UINT16_MAX)>::Type>
+template<typename T, unsigned int i, typename L = Semaphore, typename IT = typename __DATATYPES_STACK_HELPER__::Index<(i<UINT8_MAX),(1<UINT16_MAX)>::Type>
 class Stack {
 private:
     // this threadsafes our Stack for use;
-    Mutex _m;
+    L _m;
     // the main data storage
     T _data[i];
     // how far are we on our storage
@@ -109,13 +105,15 @@ public:
      * 
      */
     void clear() {_num = 0;};
+
+    _Locking& getLock() {return _m;}
 };
 
-template<typename T, unsigned int i, typename IT>
-Stack<T, i, IT>::Stack(): _num(0) {};
+template<typename T, unsigned int i, typename L, typename IT>
+Stack<T, i, L, IT>::Stack(): _num(0) {};
 
-template<typename T, unsigned int i, typename IT>
-bool Stack<T, i, IT>::push(T inp) {
+template<typename T, unsigned int i, typename L, typename IT>
+bool Stack<T, i, L, IT>::push(T inp) {
     LockGuard l(_m);
     if (isFull())
         return false;
@@ -124,8 +122,8 @@ bool Stack<T, i, IT>::push(T inp) {
     return true;
 };
 
-template<typename T, unsigned int i, typename IT>
-bool Stack<T, i, IT>::push(T inp, uint64_t timeout) {
+template<typename T, unsigned int i, typename L, typename IT>
+bool Stack<T, i, L, IT>::push(T inp, uint64_t timeout) {
     LockGuard l(_m);
     timeout += millis();
     while (isFull() && timeout < millis()) 
@@ -138,15 +136,15 @@ bool Stack<T, i, IT>::push(T inp, uint64_t timeout) {
     return true;
 };
 
-template<typename T, unsigned int i, typename IT>
-T Stack<T, i, IT>::pop() {
+template<typename T, unsigned int i, typename L, typename IT>
+T Stack<T, i, L, IT>::pop() {
     LockGuard l(_m);
     if (isEmpty())
         return _data[_num];
     return _data[--_num];
 }
-template<typename T, unsigned int i, typename IT>
-T Stack<T, i, IT>::pop(uint64_t timeout) {
+template<typename T, unsigned int i, typename L, typename IT>
+T Stack<T, i, L, IT>::pop(uint64_t timeout) {
     LockGuard l(_m);
     timeout += millis();
     while (isEmpty() && timeout >= millis()) 
@@ -156,8 +154,8 @@ T Stack<T, i, IT>::pop(uint64_t timeout) {
         return _data[_num];
     return _data[--_num];
 }
-template<typename T, unsigned int i, typename IT>
-T Stack<T, i, IT>::top() {
+template<typename T, unsigned int i, typename L, typename IT>
+T Stack<T, i, L, IT>::top() {
     LockGuard l(_m);
     return _data[_num];
 }

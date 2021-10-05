@@ -1,10 +1,6 @@
 #ifndef __DATATYPES_QUEUE_H__
 #define __DATATYPES_QUEUE_H__
 
-#include "Mutex.h"
-
-extern Scheduler OS;
-
 /** 
  * this is here so that we can use as little data as possible in this datatype.
  * what happens is that the datatype used to index the queue will always be the smallest 
@@ -33,13 +29,14 @@ namespace __DATATYPES_QUEUE_HELPER__ {
  * @brief This is a basic threadsafe container for queueing data 
  * 
  * @tparam T The type of data stored in the Queue
- * @tparam i The maximum number of datapoints in the Queue
+ * @tparam i The maximum number of datapoints in the Queue. defaults to 10
+ * @tparam L the type of locking mechanism to use. defaults to Semaphore
  * @tparam IT Generated at compile time. Do not put insert anything into this spot. 
  */
-template<typename T, unsigned int i, typename IT = __Queue_IT_TYPE__>
+template<typename T, unsigned int i=10, typename L = Semaphore, typename IT = __Queue_IT_TYPE__>
 class Queue {
 private:
-    Mutex _m;                   /** the mutex used to threadsafe the queue */
+    L _m;                      /** the locking device used to threadsafe the queue */
     T _data[i];                 /** where the data is actually stored */
     IT _front, _back, _count;   /** one of the counters used in opperation */
 
@@ -96,10 +93,12 @@ public:
     IT size() {return _count;}
     bool isEmpty() {return _count == 0;}
     bool isFull() {return _count == i;}
+
+    _Locking& getLock() {return _m;}
 };
 
-template<typename T, unsigned int i, typename IT>
-IT Queue<T, i, IT>::next(IT &n) {
+template<typename T, unsigned int i, typename L, typename IT>
+IT Queue<T, i, L, IT>::next(IT &n) {
     n++;
     if (n >= i) { 
         n = 0;
@@ -108,11 +107,11 @@ IT Queue<T, i, IT>::next(IT &n) {
     return n-1;
 }
 
-template<typename T, unsigned int i, typename IT>
-Queue<T, i, IT>::Queue(): _front(0), _back(0), _count(0) {};
+template<typename T, unsigned int i, typename L, typename IT>
+Queue<T, i, L, IT>::Queue(): _front(0), _back(0), _count(0) {};
 
-template<typename T, unsigned int i, typename IT>
-bool Queue<T, i, IT>::enqueue(const T inp) {
+template<typename T, unsigned int i, typename L, typename IT>
+bool Queue<T, i, L, IT>::enqueue(const T inp) {
     LockGuard l(_m);
     if (isFull())
         return false;
@@ -120,8 +119,8 @@ bool Queue<T, i, IT>::enqueue(const T inp) {
     return true;
 }
 
-template<typename T, unsigned int i, typename IT>
-bool Queue<T, i, IT>::enqueue(const T inp, uint64_t timeout) {
+template<typename T, unsigned int i, typename L, typename IT>
+bool Queue<T, i, L, IT>::enqueue(const T inp, uint64_t timeout) {
     LockGuard l(_m);
     timeout += millis();
     while (isFull() && timeout < millis())
@@ -129,16 +128,16 @@ bool Queue<T, i, IT>::enqueue(const T inp, uint64_t timeout) {
     return enqueue(inp);
 }
 
-template<typename T, unsigned int i, typename IT>
-T Queue<T, i, IT>::dequeue() {
+template<typename T, unsigned int i, typename L, typename IT>
+T Queue<T, i, L, IT>::dequeue() {
     LockGuard l(_m);
     if (isEmpty())
         return _data[_back];
     return _data[next(_back)];
 }
 
-template<typename T, unsigned int i, typename IT>
-T Queue<T, i, IT>::dequeue(uint64_t timeout) {
+template<typename T, unsigned int i, typename L, typename IT>
+T Queue<T, i, L, IT>::dequeue(uint64_t timeout) {
     LockGuard l(_m);
     timeout += millis();
     while (isFull() && timeout < millis())
