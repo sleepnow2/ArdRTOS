@@ -125,16 +125,24 @@ void Scheduler::yield() {
     TIMER0_COMPA_vect();
 }
 
-void Scheduler::delay(unsigned long ms) {
-    ms += millis();
-    while (ms > millis()) {
-        yield();
-    }
+// the reason this is inline is because it would be a waste to have it
+// take up valuable space on the stack just to call another function.
+inline void Scheduler::delay(unsigned long ms) {
+	delayUntill(ms+millis());
 }
 void Scheduler::delayUntill(unsigned long ms) {
-    while (ms > millis()) {
-        yield();
-    }
+    unsigned long calledTime = millis();
+
+    // this is to handle overflows in the time keeping.
+	if (ms < calledTime) {
+        // this will keep yielding untill it passes zero.
+        // putting in max value for ms will not break this.
+        // however, if this task gets time once every 50+ days, this function will break down.
+        while (millis() >= calledTime)
+            yield();
+	}
+	while (millis() < ms)
+			yield();
 }
 
 void Scheduler::enable() {
