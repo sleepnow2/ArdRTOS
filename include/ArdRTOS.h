@@ -14,7 +14,8 @@
 
 #include <Arduino.h>
 
-typedef void (osFuncCall)(void);
+typedef void (*osFuncCall)(void);
+typedef void (*osFuncCallArg)(void*);
 typedef unsigned char TaskID;
 
 #define NAKED __attribute__((naked))

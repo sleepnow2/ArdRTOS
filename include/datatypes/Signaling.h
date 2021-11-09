@@ -155,6 +155,7 @@ public:
     bool available() {return _lock;};
 };
 
+#ifndef COOP_ONLY
 /*
 888b     d888 888     888 88888888888 8888888888 Y88b   d88P
 8888b   d8888 888     888     888     888         Y88b d88P
@@ -313,7 +314,10 @@ public:
      */
     bool available() {return _lock;};
 };
-
+#else
+// because the OS is limited to coop only, the mutexes and semaphores become practically the same.
+typedef Semaphore Mutex;
+#endif
 /*
 888      .d88888b.   .d8888b.  888    d8P   .d8888b.  888     888       d8888 8888888b.  8888888b.
 888     d88P" "Y88b d88P  Y88b 888   d8P   d88P  Y88b 888     888      d88888 888   Y88b 888  "Y88b

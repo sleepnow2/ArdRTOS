@@ -9,19 +9,45 @@
  * 
  */
 
+// this define prevents repeat warnings from the compiler
+#define ARDRTOS_NO_WARNINGS
+
 //! INCLUDES BEGIN
 #include "ArdRTOS.h"
-#include "avr/wdt.h"
 #include <setjmp.h>
 #include <alloca.h>
 //! INCLUDES END
 
+/*
+##     ##    ###    ########   ######
+##     ##   ## ##   ##     ## ##    ##
+##     ##  ##   ##  ##     ## ##
+##     ## ##     ## ########   ######
+ ##   ##  ######### ##   ##         ##
+  ## ##   ##     ## ##    ##  ##    ##
+   ###    ##     ## ##     ##  ######
+*/
 struct _TASK {
-    osFuncCall* fc;
+    // the function pointer to call
+    osFuncCall fc;
+
+    // the arg to pass if it exists. note, it must be a single void pointer, but
+    // it can be filled with a class, struct, or basic type if you want. 
+    void* arg;
+
+    // stack start. this is used at the begining to set up the OS.
     unsigned ss;
+
+    // the jump buffer used to store cpu context and restore execution.
     jmp_buf jb;
+    
+    #ifndef COOP_ONLY
+    // priority and temporary priority. priority isnt a thing with cooporative opperating systems.
+    // And since we couldnt find 
     unsigned char p;
     unsigned char tp;
+    #endif // !COOP_ONLY
+    
 } tasks[MAX_TASK_COUNT+1];
 
 // the current task
@@ -31,20 +57,41 @@ volatile TaskID curr = 0;
 // saving its num to a register uint8_t var when i want to read it
 // and updating this value with said var when i want to write to it
 volatile unsigned char numt = 0;
+
+
+#ifndef COOP_ONLY
+// slots left.
+// if we are running in coop only, then we do not need to be concerned with priority or slots.
 unsigned char sl = 0;
+#endif // !COOP_ONLY
+
 
 bool cooporative = false;
 
-//! ============ begin context switcher ======================
+/*
+ ######   #######  ##    ## ######## ######## ##     ## ########     ######  ##      ## #### ########  ######  ##     ## ######## ########
+##    ## ##     ## ###   ##    ##    ##        ##   ##     ##       ##    ## ##  ##  ##  ##     ##    ##    ## ##     ## ##       ##     ##
+##       ##     ## ####  ##    ##    ##         ## ##      ##       ##       ##  ##  ##  ##     ##    ##       ##     ## ##       ##     ##
+##       ##     ## ## ## ##    ##    ######      ###       ##        ######  ##  ##  ##  ##     ##    ##       ######### ######   ########
+##       ##     ## ##  ####    ##    ##         ## ##      ##             ## ##  ##  ##  ##     ##    ##       ##     ## ##       ##   ##
+##    ## ##     ## ##   ###    ##    ##        ##   ##     ##       ##    ## ##  ##  ##  ##     ##    ##    ## ##     ## ##       ##    ##
+ ######   #######  ##    ##    ##    ######## ##     ##    ##        ######   ###  ###  ####    ##     ######  ##     ## ######## ##     ##
+*/
 
 // NOOP justified because this is exactly what i want and the compiler WILL mess this up.
 NOOP void loop(osFuncCall f) {
-    while (1)
+    while (true)
         f();
-}
+};
 
-// thie interrupt saves the special register and all of the function call registers
-ISR (TIMER0_COMPA_vect, NOOP) {
+NOOP void loop(osFuncCallArg f, void* arg) {
+    while (true)
+        f(arg);
+};
+
+// the interrupt saves the special register and all of the function call registers
+ISR (CONTEXT_SWITCHER_ISR_VECT, NOOP) {
+    
     // dissable interrupts as I do not want to be interrupted while context switching whatsoever.
     noInterrupts();
     // setjmp saves the function return registers
@@ -52,38 +99,67 @@ ISR (TIMER0_COMPA_vect, NOOP) {
         // this is done so we dont have to keep grabing and placing memory all the time
         // a bit of optimization since we know we wont be interrupted
         register unsigned char c = curr;
-        if (sl == 0) {
+        // check for stack overflows
+
+        #ifdef COOP_ONLY
+            // if we are coop only, then we dont have priority
             if (c == 0) {
                 c = numt;
             } else {
                 c--;
-                sl = tasks[c].tp;
             }
             curr = c;
-        } else {
-            sl--;
-        }
+        #else
+            // if we are preemptive-coop, then we have priority
+            if (sl == 0) {
+
+                if (c == 0) {
+                    c = numt;
+                } else {
+                    c--;
+                    sl = tasks[c].tp;
+                }
+                curr = c;
+            } else {
+                sl--;
+            }
+        #endif // !COOP_ONLY
         longjmp(tasks[c].jb, 1);
     }
 }
 
-//! ============ end context switcher ========================
-Scheduler::Scheduler() {
-}
+/*
+ ######   ######  ##     ## ######## ########  ##     ## ##       ######## ########
+##    ## ##    ## ##     ## ##       ##     ## ##     ## ##       ##       ##     ##
+##       ##       ##     ## ##       ##     ## ##     ## ##       ##       ##     ##
+ ######  ##       ######### ######   ##     ## ##     ## ##       ######   ########
+      ## ##       ##     ## ##       ##     ## ##     ## ##       ##       ##   ##
+##    ## ##    ## ##     ## ##       ##     ## ##     ## ##       ##       ##    ##
+ ######   ######  ##     ## ######## ########   #######  ######## ######## ##     ##
+*/
+Scheduler::Scheduler() {}
 
-void Scheduler::addTask(osFuncCall &loop, unsigned stackSize, unsigned char priority) {
+void Scheduler::addTask(osFuncCall loop, unsigned stackSize, unsigned char priority) {
     //grab the value of numt and store it
     register unsigned char n = numt;
     // save the pointer to the function to loop over
     tasks[n].fc = loop;
+    tasks[n].arg = (void*)0;
     // save how big you want the stack to be
     tasks[n].ss = stackSize + _JBLEN;
 
+    #ifndef COOP_ONLY
     tasks[n].p = priority;
     tasks[n].tp = priority;
-
+    #endif // !COOP_ONLY
+    
     // increment numt
     numt = n + 1;
+}
+
+void Scheduler::addTask(osFuncCallArg loop, void *arg, unsigned stackSize, unsigned char priority) {
+    addTask((osFuncCall)loop, stackSize, priority);
+    tasks[numt-1].arg = arg;
 }
 
 // NOOP is justified because alloca will be whisked away if we dont, and we dont want that.
@@ -98,8 +174,13 @@ NOOP void Scheduler::begin() {
             alloca(tasks[curr-1].ss);
 
         if(setjmp(tasks[curr].jb) == 1) {
+            if (tasks[curr].arg != 0){
+                interrupts();
+                loop((osFuncCallArg)tasks[curr].fc, tasks[curr].arg);
+            } else {
             interrupts();
             loop(tasks[curr].fc); 
+            }
         }
     }
     // write to memory
@@ -107,27 +188,31 @@ NOOP void Scheduler::begin() {
     curr = 0;
 
     // set up timer
-    if (!cooporative) {
-        // if we are cooporative, we wouldnt want the interrupt to keep going off
-        OCR0A = 20;
-        enable();
-    }
+    #ifndef COOP_ONLY
+        if (!cooporative) {
+            // if we are cooporative, we wouldnt want the interrupt to keep going off.
+            // this sets up the timers needed for the OS. since this needs to be ported, it is defined on a
+            // port by port case.
+            ARDRTOS_SETUP;
+        }
+    #endif // !COOP_ONLY
     longjmp(tasks[0].jb, 1);
 }
+
+#ifndef COOP_ONLY
 void Scheduler::beginPreemptive() {begin();}
 void Scheduler::beginCooporative() {cooporative = true; begin(); }
+#else
+void Scheduler::beginCooporative() {begin();}
+#endif // !COOP_ONLY
 
 void Scheduler::yield() {
-    // works in either cooporative or preemptive all the same.
-    // give up all remaining slots left
-    sl = 0;
-    // yield time to the processor
-    TIMER0_COMPA_vect();
+    ARDRTOS_YIELD;
 }
 
 // the reason this is inline is because it would be a waste to have it
 // take up valuable space on the stack just to call another function.
-inline void Scheduler::delay(unsigned long ms) {
+void Scheduler::delay(unsigned long ms) {
 	delayUntill(ms+millis());
 }
 void Scheduler::delayUntill(unsigned long ms) {
@@ -145,18 +230,15 @@ void Scheduler::delayUntill(unsigned long ms) {
 			yield();
 }
 
+#ifndef COOP_ONLY
 void Scheduler::enable() {
     // if we are in cooporative mode, we shouldnt turn on the preemptive OS
-    if (!cooporative) bitSet(TIMSK0,OCIE0A);
+    ARDRTOS_ENABLE;
 }
 
 void Scheduler::dissable() {
     // if we are in cooporative mode, we shouldnt turn on the preemptive OS
-    if (!cooporative) bitClear(TIMSK0,OCIE0A);
-}
-
-TaskID Scheduler::getTaskID() {
-    return curr;
+    ARDRTOS_DISSABLE;
 }
 
 void Scheduler::setPriority(unsigned char priority) {
@@ -180,4 +262,9 @@ void Scheduler::donatePriority(TaskID taskID) {
 
 void Scheduler::resetPriority() {
     tasks[curr].tp = tasks[curr].p;
+}
+#endif // !COOP_ONLY
+
+TaskID Scheduler::getTaskID() {
+    return curr;
 }
