@@ -9,7 +9,7 @@
  * 
  */
 
-// this define prevents repeat warnings from the compiler
+// if there is a problem, main.cpp will report it.
 #define ARDRTOS_NO_WARNINGS
 
 //! INCLUDES BEGIN
@@ -27,6 +27,15 @@
   ## ##   ##     ## ##    ##  ##    ##
    ###    ##     ## ##     ##  ######
 */
+
+//! GLOBAL VARIABLES BEGIN
+Scheduler OS;
+//! GLOBAL VARIABLES END
+
+// this is the arduino basic yield. this is included for any boards like the ESP8266 that rely on this for processing.
+// the reason this needs to be aliased is because of a name collision with the Scheduler class.
+constexpr auto ARD_YIELD = yield;
+
 struct _TASK {
     // the function pointer to call
     osFuncCall fc;
@@ -41,7 +50,7 @@ struct _TASK {
     // the jump buffer used to store cpu context and restore execution.
     jmp_buf jb;
     
-    #ifndef COOP_ONLY
+    #if not defined(COOP_ONLY) or defined(NO_PRIORITIES)
     // priority and temporary priority. priority isnt a thing with cooporative opperating systems.
     // And since we couldnt find 
     unsigned char p;
@@ -90,41 +99,35 @@ NOOP void loop(osFuncCallArg f, void* arg) {
 };
 
 // the interrupt saves the special register and all of the function call registers
-ISR (CONTEXT_SWITCHER_ISR_VECT, NOOP) {
-    
+CSWITCH(CONTEXT_SWITCHER_ISR_VECT) {
     // dissable interrupts as I do not want to be interrupted while context switching whatsoever.
     noInterrupts();
     // setjmp saves the function return registers
     if (setjmp(tasks[curr].jb) == 0) {
-        // this is done so we dont have to keep grabing and placing memory all the time
-        // a bit of optimization since we know we wont be interrupted
-        register unsigned char c = curr;
         // check for stack overflows
 
-        #ifdef COOP_ONLY
+        #if defined(COOP_ONLY) or defined(NO_PRIORITIES)
             // if we are coop only, then we dont have priority
-            if (c == 0) {
-                c = numt;
+            if (curr == 0) {
+                curr = numt;
             } else {
-                c--;
+                curr--;
             }
-            curr = c;
         #else
             // if we are preemptive-coop, then we have priority
             if (sl == 0) {
 
-                if (c == 0) {
-                    c = numt;
+                if (curr == 0) {
+                    curr = numt;
                 } else {
-                    c--;
-                    sl = tasks[c].tp;
+                    curr--;
+                    sl = tasks[curr].tp;
                 }
-                curr = c;
             } else {
                 sl--;
             }
         #endif // !COOP_ONLY
-        longjmp(tasks[c].jb, 1);
+        longjmp(tasks[curr].jb, 1);
     }
 }
 
@@ -141,7 +144,7 @@ Scheduler::Scheduler() {}
 
 void Scheduler::addTask(osFuncCall loop, unsigned stackSize, unsigned char priority) {
     //grab the value of numt and store it
-    register unsigned char n = numt;
+    unsigned char n = numt;
     // save the pointer to the function to loop over
     tasks[n].fc = loop;
     tasks[n].arg = (void*)0;
@@ -165,10 +168,8 @@ void Scheduler::addTask(osFuncCallArg loop, void *arg, unsigned stackSize, unsig
 // NOOP is justified because alloca will be whisked away if we dont, and we dont want that.
 NOOP void Scheduler::begin() {
     noInterrupts();
-    // this is done so that i can controll exactly when memory is written to and read from;
-    register unsigned char nt = numt;
     // transfer from describing how much space they want into 
-    for(curr = 0; curr < nt; curr++) {
+    for(curr = 0; curr < numt; curr++) {
         // after initializing a stack, move up by the stack size you want
         if(curr > 0) 
             alloca(tasks[curr-1].ss);
@@ -184,7 +185,7 @@ NOOP void Scheduler::begin() {
         }
     }
     // write to memory
-    numt = nt-1;
+    numt = numt-1;
     curr = 0;
 
     // set up timer
@@ -207,11 +208,11 @@ void Scheduler::beginCooporative() {begin();}
 #endif // !COOP_ONLY
 
 void Scheduler::yield() {
+    // this version of yield is for use in OS.yield, OS.delay
     ARDRTOS_YIELD;
+    ARD_YIELD();
 }
 
-// the reason this is inline is because it would be a waste to have it
-// take up valuable space on the stack just to call another function.
 void Scheduler::delay(unsigned long ms) {
 	delayUntill(ms+millis());
 }
@@ -223,24 +224,16 @@ void Scheduler::delayUntill(unsigned long ms) {
         // this will keep yielding untill it passes zero.
         // putting in max value for ms will not break this.
         // however, if this task gets time once every 50+ days, this function will break down.
-        while (millis() >= calledTime)
+        while (millis() >= calledTime){
             yield();
+            ARD_YIELD();
+        }
 	}
 	while (millis() < ms)
-			yield();
+        yield();
 }
 
-#ifndef COOP_ONLY
-void Scheduler::enable() {
-    // if we are in cooporative mode, we shouldnt turn on the preemptive OS
-    ARDRTOS_ENABLE;
-}
-
-void Scheduler::dissable() {
-    // if we are in cooporative mode, we shouldnt turn on the preemptive OS
-    ARDRTOS_DISSABLE;
-}
-
+#if not defined(COOP_ONLY) and not defined(NO_PRIORITIES)
 void Scheduler::setPriority(unsigned char priority) {
     tasks[curr].p = priority;
     tasks[curr].tp = priority;

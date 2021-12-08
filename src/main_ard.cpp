@@ -1,37 +1,30 @@
 #include <Arduino.h>
 #include "ArdRTOS.h"
 
+// the pins on the test board
 uint8_t LEDS[] = {3, 5, 6};
-uint8_t BTN = 4;
 
 void blink(void* l) {
-    pinMode(*(uint8_t*)l, OUTPUT);
-    bool b = true;
+    uint8_t led = *(uint8_t*)l;
+    // setup
+    pinMode(led, OUTPUT);
 
-    while (1) {
-        digitalWrite (*(uint8_t*)l, b);
-        b = !b;
-        OS.delay((*(uint8_t*)l)*200);
-    }
-}
-
-void blink6(void) {
-    pinMode(6, OUTPUT);
-    bool b = true;
-
-    while (1) {
-        digitalWrite (6, b);
-        b = !b;
-        OS.delay(6*200);
+    // task main loop
+    for(;;){
+        digitalWrite(led, 1); delay(led * 150);
+        digitalWrite(led, 0); delay(led * 100);
     }
 }
 
 void setup() {
     OS.addTask(blink, LEDS);
-    OS.addTask(blink, LEDS+1);
-    OS.addTask(blink6);
+    OS.addTask(blink, LEDS + 1);
+    OS.addTask(blink, LEDS + 2);
 
-    OS.beginCooporative();
+    OS.begin();
+    // program never gets here
 }
 
-void loop() {/*unused*/}
+void loop() {
+    // do nothing
+}

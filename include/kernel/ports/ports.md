@@ -4,12 +4,11 @@
 - Atmega family
 - esp8266
 
-#coop only ports
+# coop only ports
 - teensy family
+- stm32
+- SAMD
 
 # unsupported ports
-- stm32
 - arm cortex M series
-- SAMD series
-- SAMX series
 - ...amongst others

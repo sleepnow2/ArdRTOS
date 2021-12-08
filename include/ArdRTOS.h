@@ -30,7 +30,7 @@ typedef unsigned char TaskID;
 #endif // !MAX_TASK_COUNT
 
 //! INCLUDES BEGIN
-#include "kernel/init.h"
+#include "kernel/Scheduler.h"
 extern Scheduler OS;
 #include "datatypes/init.h"
 //! INCLUDES END
