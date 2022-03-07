@@ -70,10 +70,11 @@
 
 #define CSWITCH(v) ISR(v, NOOP)
 
-#ifdef COOP_ONLY
+#ifdef NO_PRIORITIES
     #define ARDRTOS_YIELD\
     CONTEXT_SWITCHER_ISR_VECT()
     // enable, dissable, and setup are skipped over if COOP_ONLY is defined.
+    #define ARDRTOS_SETUP 
 #else
     // a custom yield function for each archetecture
     #define ARDRTOS_YIELD\

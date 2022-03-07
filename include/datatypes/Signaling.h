@@ -1,10 +1,11 @@
 #ifndef __DATATYPES_MUTEX_H__
 #define __DATATYPES_MUTEX_H__
 
-// to hide it away from the users.
+// hide it away from the users. they dont need to know.
 class _Locking {
 public:
     virtual void lock();
+    virtual bool lockImmediate();
     virtual void unlock();
 };
 
@@ -91,12 +92,15 @@ public:
         }
 
         while (!_lock ) {
+            if (timeout < millis()) {
+                interrupts();
+                return false;
+            }
             OS.yield();
             // interrups are enabled after OS.yield(), so
             // we must dissable interrupts before we continue to prevent
             // data from changing while we are working on it
             // here is where the ISR pertaining to millis has a chance to fire
-            if (timeout < millis()) return false;
             // dissallow interrupts so that we can not be interrupted when checking for the lock again
             noInterrupts();
         }
@@ -141,8 +145,10 @@ public:
      * 
      */
     void unlock() {
-        _locking_task = UINT8_MAX;
+        noInterrupts();
+        _locking_task = 0xFF;
         _lock = true;
+        interrupts();
     }
 
 
@@ -235,23 +241,26 @@ public:
     bool lock(unsigned long long timeout){
         // set a timeout time.
         timeout += millis();
-        noInterrupts();
 
         TaskID tid = OS.getTaskID();
         // this is to prevent double locking one mutex from one task;
         if(_locking_task == tid) {
-            interrupts();
             // this true signifies that you already have the lock... dumbass...
             return true;
         }
         TaskID oldLockingTask = 0xFF;
+        
+        noInterrupts();
         while (!_lock ) {
+            if (timeout < millis()) {
+                interrupts();
+                return false;
+            }
             OS.yield();
             // interrups are enabled after OS.yield(), so
             // we must dissable interrupts before we continue to prevent
             // data from changing while we are working on it
             // here is where the ISR pertaining to millis has a chance to fire
-            if (timeout < millis()) return false;
             // dissallow interrupts so that we can not be interrupted when checking for the lock again
             noInterrupts();
             if (oldLockingTask != _locking_task) {
@@ -285,6 +294,7 @@ public:
             interrupts();
             return true;
         }
+
         if(_lock) {
             _lock = false;
             _locking_task = tid;
@@ -302,8 +312,10 @@ public:
      */
     void unlock() {
         OS.resetPriority();
+        noInterrupts();
         _locking_task = 0xFF;
         _lock = true;
+        interrupts();
     }
 
     /**

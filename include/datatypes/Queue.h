@@ -22,8 +22,8 @@ namespace __DATATYPES_QUEUE_HELPER__ {
 		using Type = uint8_t;
 	};
 }
-// used to hide the jumble from 
-#define __Queue_IT_TYPE__ typename __DATATYPES_QUEUE_HELPER__::Index<(i<UINT8_MAX-1),(1<UINT16_MAX-1)>::Type
+// used to hide the jumble from users
+#define __Queue_IT_TYPE__ typename __DATATYPES_QUEUE_HELPER__::Index<(i<UINT8_MAX-1),(i<UINT16_MAX-1)>::Type
 
 /**
  * @brief This is a basic threadsafe container for queueing data 
@@ -121,11 +121,30 @@ bool Queue<T, i, L, IT>::enqueue(const T inp) {
 
 template<typename T, unsigned int i, typename L, typename IT>
 bool Queue<T, i, L, IT>::enqueue(const T inp, uint64_t timeout) {
-    LockGuard l(_m);
     timeout += millis();
-    while (isFull() && timeout < millis())
+    while(!_m.lockImmediate() && timeout < millis()) {
         OS.yield();
-    return enqueue(inp);
+    }
+
+    while (isFull() && timeout < millis()) {
+        _m.unlock();
+        OS.yield();
+        while(!_m.lockImmediate() && timeout < millis()) {
+            OS.yield();
+        }
+    }
+
+    if (isFull()) {
+        _m.unlock();
+        return false;
+    } else if (timeout < millis()) {
+        // we dont have a lock anyways.
+        return false;
+    } else {
+        _data[next(_front)] = inp;
+        _m.unlock();
+        return true;
+    }
 }
 
 template<typename T, unsigned int i, typename L, typename IT>
@@ -138,10 +157,20 @@ T Queue<T, i, L, IT>::dequeue() {
 
 template<typename T, unsigned int i, typename L, typename IT>
 T Queue<T, i, L, IT>::dequeue(uint64_t timeout) {
-    LockGuard l(_m);
     timeout += millis();
-    while (isFull() && timeout < millis())
+    while(!_m.lockImmediate() && timeout < millis()) {
         OS.yield();
+    }
+    while (isFull() && timeout < millis()){
+        _m.unlock();
+        OS.yield();
+        // while we dont have the lock, and we are still within timeout...
+        while(!_m.lockImmediate() && timeout < millis()){
+            OS.yield();
+        }
+    }
+    // this will call the deconstructor, unlocking it when we return.
+    LockGuard l(_m);
     if (isEmpty())
         return _data[_back];
     return _data[next(_back)];

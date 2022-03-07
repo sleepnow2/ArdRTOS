@@ -10,7 +10,7 @@
     #define ARDRTOS_NO_WARNINGS_DECL
 #endif
 
-#define CSWITCH(vector)\
+#define ISR(vector)\
     void vector (void) __attribute__((optimize("O0"))); \
     void vector (void)
 
@@ -18,6 +18,6 @@
 
 #define ARDRTOS_YIELD CONTEXT_SWITCHER_ISR_VECT()
 
-#define ARDRTOS_SETUP
+#define ARDRTOS_SETUP 
 
 #endif //!__ARDRTOS_KERNEL_PORTS_ESP8266__

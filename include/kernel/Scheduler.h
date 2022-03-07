@@ -14,6 +14,9 @@
 
 #include "kernel/ports/init.h"
 
+#if defined(COOP_ONLY) and (not defined(NO_PRIORITIES))
+    #define NO_PRIORITIES
+#endif
 /*
  .d8888b.   .d8888b.  888    888 8888888888 8888888b.  888     888 888      8888888888 8888888b.
 d88P  Y88b d88P  Y88b 888    888 888        888  "Y88b 888     888 888      888        888   Y88b
@@ -78,20 +81,34 @@ public:
 	void yield();
 
 	/**
-	 * @brief untill the amount time spesified passes, it calls the context switcher.
+	 * @brief yield untill the spesified amount of time has passed
 	 * 
-	 * @param ms how long to wait
+	 * @param ms how long to wait in milliseconds
 	 */
 	void delay(unsigned long ms);
 
 	/**
-	 * @brief untill the time spesified approaches, it calls the context switcher.
+	 * @brief yield untill the spesified amount of time has passed
 	 * 
-	 * @param ms the time to wait till
+	 * @param ns how long to wait in microseconds
+	 */
+	void delayMicroseconds(unsigned long us);
+
+	/**
+	 * @brief yield untill the spesified time
+	 * 
+	 * @param ms the time to wait till in milliseconds
 	 */
 	void delayUntill(unsigned long ms);
 
-		/**
+	/**
+	 * @brief yield untill the spesified time
+	 * 
+	 * @param ms the time to wait till in microseconds
+	 */
+	void delayUntillMicroseconds(unsigned long us);
+
+	/**
 	 * @brief fetches the taskID of the currently running task
 	 * 
 	 * @return uint8_t 
@@ -115,11 +132,11 @@ public:
 	 */
 	void setPriority(TaskID taskID, unsigned char priority);
 
-	friend class Semaphore;
+	// so i can get priorities.
 	friend class Mutex;
 private:
 	/**
-	 * @brief gives your priority to another task
+	 * @brief gives another task a timeslot equal to the max timeslot between the current task and the named task.
 	 * 
 	 * @param taskID the task you wish to donate too
 	 */

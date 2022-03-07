@@ -24,7 +24,7 @@ namespace __DATATYPES_STACK_HELPER__ {
 }
 
 
-template<typename T, unsigned int i, typename L = Semaphore, typename IT = typename __DATATYPES_STACK_HELPER__::Index<(i<UINT8_MAX),(1<UINT16_MAX)>::Type>
+template<typename T, unsigned int i, typename L = Semaphore, typename IT = typename __DATATYPES_STACK_HELPER__::Index<(i<UINT8_MAX),(i<UINT16_MAX)>::Type>
 class Stack {
 private:
     // this threadsafes our Stack for use;
@@ -124,15 +124,22 @@ bool Stack<T, i, L, IT>::push(T inp) {
 
 template<typename T, unsigned int i, typename L, typename IT>
 bool Stack<T, i, L, IT>::push(T inp, uint64_t timeout) {
-    LockGuard l(_m);
     timeout += millis();
-    while (isFull() && timeout < millis()) 
-        OS.yield();
 
-    if (timeout >= millis()) 
+    _m.lock();
+    while (isFull() && timeout < millis()) {
+        _m.unlock();
+        OS.yield();
+        _m.lock();
+    }
+
+    if (timeout >= millis()) {
+        _m.unlock();
         return false;
+    }
 
     _data[_num++] = inp;
+    _m.unlock();
     return true;
 };
 
@@ -145,14 +152,15 @@ T Stack<T, i, L, IT>::pop() {
 }
 template<typename T, unsigned int i, typename L, typename IT>
 T Stack<T, i, L, IT>::pop(uint64_t timeout) {
-    LockGuard l(_m);
     timeout += millis();
-    while (isEmpty() && timeout >= millis()) 
+    _m.lock();
+    while (isEmpty() && timeout >= millis()) {
+        _m.unlock();
         OS.yield();
-
-    if (isEmpty())
-        return _data[_num];
-    return _data[--_num];
+        _m.lock();
+    }
+    // since i already have the lock, this should not spend any time waiting.
+    return pop();
 }
 template<typename T, unsigned int i, typename L, typename IT>
 T Stack<T, i, L, IT>::top() {

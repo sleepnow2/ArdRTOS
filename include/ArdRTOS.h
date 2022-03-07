@@ -1,7 +1,7 @@
 /**
  * @file ArdRTOS.h
- * @author Alex Olson (aolson@mail.bradley.edu)
- * @brief this file handles all of the defines and the 
+ * @author Alex Olson (sleepnow2@gmail.com)
+ * @brief this file handles all of the defines, typedefs, and the scheduler class
  * @version 0.1
  * @date 2021-05-04
  * 
@@ -11,6 +11,15 @@
 
 #ifndef __ARDRTOS_H__
 #define __ARDRTOS_H__
+
+//! SETTINGS BEGIN
+// numerical settings 
+#define ARDRTOS_TASK_COUNT 8
+
+// uncomment below to activate or deactivate settings
+//#defined COOP_ONLY
+//#defined NO_PRIORITIES
+//! SETTINGS END
 
 #include <Arduino.h>
 
@@ -22,19 +31,10 @@ typedef unsigned char TaskID;
 #define NOINLINE __attribute__((noinline))
 #define NOOP __attribute__((optimize("O0")))
 
-#ifndef MAX_TASK_COUNT
-    #define MAX_TASK_COUNT 8
-#elif MAX_TASK_COUNT <= 0
-    #undef  MAX_TASK_COUNT
-    #define MAX_TASK_COUNT 1
-#endif // !MAX_TASK_COUNT
-
 //! INCLUDES BEGIN
 #include "kernel/Scheduler.h"
 extern Scheduler OS;
 #include "datatypes/init.h"
 //! INCLUDES END
-
-
 
 #endif // __ARDRTOS_H__
