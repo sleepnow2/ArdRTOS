@@ -3,13 +3,14 @@
 //     Demonstrate listener tasks listening in to other tasks data for 
 //        display, logging, or controlling hardware by listening in to pure software tasks. 
 
-//*
+/*
 #include <Arduino.h>
 #define ARDRTOS_NO_WARNINGS
 #include "ArdRTOS.h"
 
 // this option is if you are using an exFAT SD card.
-#define SdFat
+//#define SdFat
+
 // this option is if you want to use delayUntill instead of just delay
 #define PRECISE_TIME
 

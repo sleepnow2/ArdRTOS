@@ -1,8 +1,4 @@
 .pio
 .vs
 .vscode
-Serial_Input_Plotter.py
-test
-platformio.ini
-src/main_ard.cpp
 platformio.ini

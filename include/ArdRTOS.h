@@ -27,12 +27,10 @@ typedef void (*osFuncCall)(void);
 typedef void (*osFuncCallArg)(void*);
 typedef unsigned char TaskID;
 
-#define NAKED __attribute__((naked))
-#define NOINLINE __attribute__((noinline))
 #define NOOP __attribute__((optimize("O0")))
 
 //! INCLUDES BEGIN
-#include "kernel/Scheduler.h"
+#include "Scheduler.h"
 extern Scheduler OS;
 #include "datatypes/init.h"
 //! INCLUDES END

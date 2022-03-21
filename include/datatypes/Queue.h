@@ -94,7 +94,14 @@ public:
     bool isEmpty() {return _count == 0;}
     bool isFull() {return _count == i;}
 
+
+    
     _Locking& getLock() {return _m;}
+    void lock() {_m.lock();}
+    bool lock(unsigned long long t) {return _m.lock(t);}
+    bool lockImediate() {return _m.lockImmediate();}
+    void unlock() {_m.unlock();}
+    bool available() {return _m.available();}
 };
 
 template<typename T, unsigned int i, typename L, typename IT>
