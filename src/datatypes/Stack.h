@@ -1,30 +1,18 @@
+/**
+ * @file Stack.h
+ * @author Alex Olson (aolson1714@gmail.com)
+ * @brief provides a queue class for users.
+ * @version 0.1
+ * @date 2022-04-03
+ * 
+ * @copyright MIT Copyright (c) 2022 Alex Olson. All rights reserved. details at bottom of file.
+ * 
+ */
+
 #ifndef __DATATYPES_STACK_H__
 #define __DATATYPES_STACK_H__
 
-/** 
- * this is here so that we can use as little data as possible in this datatype.
- * what happens is that the datatype used to index the queue will always be the smallest 
- * kind of integer that can index the whole queue.
- * 
- * if you only need 10 indexes, the data saved for doing this would be 3 bytes. which if you are saving uint8 values then
- * you have a 18.75% smaller datatype with no change whatsoever in capabilities.
- */
-namespace __DATATYPES_STACK_HELPER__ {
-    template<bool FITS8, bool FITS16> struct Index {
-		using Type = uint32_t;
-	};
-
-	template<> struct Index<false, true> {
-		using Type = uint16_t;
-	};
-
-	template<> struct Index<true, true> {
-		using Type = uint8_t;
-	};
-}
-
-
-template<typename T, unsigned int i, typename L = Semaphore, typename IT = typename __DATATYPES_STACK_HELPER__::Index<(i<UINT8_MAX),(i<UINT16_MAX)>::Type>
+template<typename T, unsigned int i, typename L = Semaphore, typename IT = __IT_TYPE__(i)>
 class Stack {
 private:
     // this threadsafes our Stack for use;
@@ -44,7 +32,7 @@ public:
      * @brief pushes data onto the stack
      * 
      * @param data the data to push to the stack
-     * @return true sucessuflly pushed to stack
+     * @return true successfully pushed to stack
      * @return false stack was full
      */
     bool push(T data);
@@ -109,7 +97,7 @@ public:
     _Locking& getLock() {return _m;}
     void lock() {_m.lock();}
     bool lock(unsigned long long t) {return _m.lock(t);}
-    bool lockImediate() {return _m.lockImmediate();}
+    bool lockImmediate() {return _m.lockImmediate();}
     void unlock() {_m.unlock();}
     bool available() {return _m.available();}
 };
@@ -164,7 +152,7 @@ T Stack<T, i, L, IT>::pop(uint64_t timeout) {
         OS.yield();
         _m.lock();
     }
-    // since i already have the lock, this should not spend any time waiting.
+    // since I already have the lock, this should not spend any time waiting.
     return pop();
 }
 template<typename T, unsigned int i, typename L, typename IT>
@@ -174,3 +162,27 @@ T Stack<T, i, L, IT>::top() {
 }
 
 #endif // !__DATATYPES_STACK_H__
+
+/**
+ * MIT License
+ * 
+ * Copyright (c) 2022 Alex Olson
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */

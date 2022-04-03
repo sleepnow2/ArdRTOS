@@ -1,29 +1,16 @@
+/**
+ * @file Queue.h
+ * @author Alex Olson (aolson1714@gmail.com)
+ * @brief provides a queue class for users.
+ * @version 0.1
+ * @date 2022-04-03
+ * 
+ * @copyright MIT Copyright (c) 2022 Alex Olson. All rights reserved. details at bottom of file.
+ */
+
 #ifndef __DATATYPES_QUEUE_H__
 #define __DATATYPES_QUEUE_H__
 
-/** 
- * this is here so that we can use as little data as possible in this datatype.
- * what happens is that the datatype used to index the queue will always be the smallest 
- * kind of integer that can index the whole queue.
- * 
- * if you only need 10 indexes, the data saved for doing this would be 9 bytes. which if you are saving uint8 values then
- * you have a 37.5% smaller datatype with no change whatsoever in capabilities.
- */
-namespace __DATATYPES_QUEUE_HELPER__ {
-    template<bool FITS8, bool FITS16> struct Index {
-		using Type = uint32_t;
-	};
-
-	template<> struct Index<false, true> {
-		using Type = uint16_t;
-	};
-
-	template<> struct Index<true, true> {
-		using Type = uint8_t;
-	};
-}
-// used to hide the jumble from users
-#define __Queue_IT_TYPE__ typename __DATATYPES_QUEUE_HELPER__::Index<(i<UINT8_MAX-1),(i<UINT16_MAX-1)>::Type
 
 /**
  * @brief This is a basic threadsafe container for queueing data 
@@ -33,7 +20,7 @@ namespace __DATATYPES_QUEUE_HELPER__ {
  * @tparam L the type of locking mechanism to use. defaults to Semaphore
  * @tparam IT Generated at compile time. Do not put insert anything into this spot. 
  */
-template<typename T, unsigned int i=10, typename L = Semaphore, typename IT = __Queue_IT_TYPE__>
+template<typename T, unsigned int i=10, typename L = Semaphore, typename IT = __IT_TYPE__(i)>
 class Queue {
 private:
     L _m;                      /** the locking device used to threadsafe the queue */
@@ -41,10 +28,10 @@ private:
     IT _front, _back, _count;   /** one of the counters used in opperation */
 
     /**
-     * @brief essencially n++ but wraps around i
+     * @brief essentially n++ but wraps around i
      * 
      * @param n the var to inc
-     * @return IT returns n before incrementation
+     * @return IT returns n before incrementing
      */
     IT next(IT &n);
 public:
@@ -59,16 +46,16 @@ public:
      * 
      * @param inp The item to push onto the end of the queue
      * @return true successfull queueing
-     * @return false failiure queueing
+     * @return false failure queueing
      */
     bool enqueue(const T inp);
     /**
      * @brief used to enqueue another item at the end of the queue
      * 
      * @param inp The item to push onto the end of the queue
-     * @param timeout how long to wait before returning failiure
+     * @param timeout how long to wait before returning failure
      * @return true successfull queueing
-     * @return false failiure queueing
+     * @return false failure queueing
      */
     bool enqueue(const T inp, uint64_t timeout);
 
@@ -99,7 +86,7 @@ public:
     _Locking& getLock() {return _m;}
     void lock() {_m.lock();}
     bool lock(unsigned long long t) {return _m.lock(t);}
-    bool lockImediate() {return _m.lockImmediate();}
+    bool lockImmediate() {return _m.lockImmediate();}
     void unlock() {_m.unlock();}
     bool available() {return _m.available();}
 };
@@ -184,3 +171,27 @@ T Queue<T, i, L, IT>::dequeue(uint64_t timeout) {
 }
 
 #endif // !__DATATYPES_QUEUE_H__
+
+/**
+ * MIT License
+ * 
+ * Copyright (c) 2022 Alex Olson
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */

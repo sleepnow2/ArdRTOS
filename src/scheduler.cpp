@@ -1,25 +1,16 @@
 /**
- * @file sceduler.cpp
- * @author Alex Olson (aolson@mail.bradley.edu)
- * @brief this contains the main kernel for ArdRTOS, the sceduler class and the ISR to operate the context switcher
+ * @file scheduler.cpp
+ * @author Alex Olson (aolson1714@gmail.com)
+ * @brief this contains the main kernel for ArdRTOS, the scheduler class and the ISR to operate the context switcher
  * @version 0.1
  * @date 2021-05-04
  * 
- * @copyright Copyright (c) 2021
+ * @copyright MIT Copyright (c) 2022 Alex Olson. All rights reserved. details at bottom of file.
  * 
  */
 
 // if there is a problem, main.cpp will report it.
 #define ARDRTOS_NO_WARNINGS
-
-#if not defined(interrupts)
-    #if defined(sei)
-        #define interrupts sei
-    #elif defined(gei)
-        #define interrupts gei
-    #endif
-#endif // !interrupts
-
 
 //! INCLUDES BEGIN
 #include "ArdRTOS.h"
@@ -27,7 +18,9 @@
 #include <alloca.h>
 //! INCLUDES END
 
-void ARDRTOS_STACK_OVERFLOW_EX();
+__attribute__((weak)) void loop() {
+    // you can use loop as a task if you so desire, but it has to be here somewhere
+}
 
 /**
  ######   ##        #######  ########     ###    ##        ######
@@ -39,36 +32,25 @@ void ARDRTOS_STACK_OVERFLOW_EX();
  ######   ########  #######  ########  ##     ## ########  ######
 */
 
-
 Scheduler OS;
-
-// this is the arduino basic yield. this is included for any boards like the ESP8266 that rely on this for processing.
-// the reason this needs to be aliased is because of a name collision with the Scheduler class.
-constexpr auto ARD_YIELD = yield;
 
 struct _TASK {
     // the function pointer to call
     osFuncCall fc;
-
     // the arg to pass if it exists. note, it must be a single void pointer, but
     // it can be filled with a class, struct, or basic type if you want. 
     void* arg;
-
-    // stack size. this is used at the begining to set up the OS and for detecting stack overflow
+    // stack size. this is used at the begining to set up the OS and for detecting stack overflow (future)
     unsigned ss;
-
     // the jump buffer used to store cpu context and restore execution.
     jmp_buf jb;
-    
 } tasks[ARDRTOS_TASK_COUNT];
 
 // the current task
-volatile TaskID curr = 0;
+volatile uint8_t curr = 0;
+
 // the number of tasks
-// the reason it is volatile is because then i can controll exactly when it is written and read from by 
-// saving its num to a register uint8_t var when i want to read it
-// and updating this value with said var when i want to write to it
-volatile unsigned char numt = 0;
+volatile uint8_t numt = 0;
 
 /**
  ######   #######  ##    ## ######## ######## ##     ## ########     ######  ##      ## #### ########  ######  ##     ## ######## ########
@@ -80,29 +62,17 @@ volatile unsigned char numt = 0;
  ######   #######  ##    ##    ##    ######## ##     ##    ##        ######   ###  ###  ####    ##     ######  ##     ## ######## ##     ##
 */
 
-void v() __attribute__((optimize("O0"), signal));
-void v() {
-    // this is for the ESP family, since they need yield in order for their internet connections to work.
-    ARD_YIELD();
-
+void Scheduler::yield() {
+    noInterrupts();
     if (setjmp(tasks[curr].jb) == 0) {
-
         if (curr == 0) {
             curr = numt;
         } else {
             curr--;
         }
-        interrupts();
         longjmp(tasks[curr].jb, 1);
     }
-}
-
-void Scheduler::yield() {
-    #if defined(ESP8266)
-        ESP.wdtFeed();
-    #endif
-    serialEventRun();
-    v();
+    interrupts();
 }
 
 /**
@@ -115,9 +85,10 @@ void Scheduler::yield() {
  ######   ######  ##     ## ######## ########   #######  ######## ######## ##     ##
 */
 
-Scheduler::Scheduler() {}
+Scheduler::Scheduler() {
+}
 
-void Scheduler::addTask(osFuncCall loop, unsigned stackSize, unsigned char priority) {
+void Scheduler::addTask(osFuncCall loop, unsigned stackSize) {
     //grab the value of numt and store it
     unsigned char n = numt;
     // save the pointer to the function to loop over
@@ -130,8 +101,8 @@ void Scheduler::addTask(osFuncCall loop, unsigned stackSize, unsigned char prior
     numt = n + 1;
 }
 
-void Scheduler::addTask(osFuncCallArg loop, void *arg, unsigned stackSize, unsigned char priority) {
-    addTask((osFuncCall)loop, stackSize, priority);
+void Scheduler::addTask(osFuncCallArg loop, void *arg, unsigned stackSize) {
+    addTask((osFuncCall)loop, stackSize);
     tasks[numt-1].arg = arg;
 }
 
@@ -145,6 +116,7 @@ NOOP void Scheduler::begin() {
         }
 
         if(setjmp(tasks[curr].jb) == 1) {
+            interrupts();
             if (tasks[curr].arg != 0){
                 // slight optimization since curr will be the same for this task for the rest of time.
                 osFuncCallArg t = (osFuncCallArg)tasks[curr].fc;
@@ -170,51 +142,6 @@ NOOP void Scheduler::begin() {
     longjmp(tasks[0].jb, 1);
 }
 
-/**
- * @brief this is for stack overflow exceptions
- * 
- */
-/*
-void ARDRTOS_STACK_OVERFLOW_EX() {
-    noInterrupts();
-
-    // communicate to the user which task is faulty if possible.
-    // otherwise, just lock up entirely.
-    while (true) {
-        // this is a setting that allows for serial output
-        #ifdef ARDRTOS_SERIAL_DEBUG_BAUD
-        if (Serial) {
-            Serial.print("STACK OVERFLOW ERROR: Caused by task ")
-            Serial.println(curr+1);
-            Serial.flush();
-        } else {
-            Serial.begin(ARDRTOS_SERIAL_DEBUG_BAUD)
-        }
-        #endif
-
-        // if I have accesses to LED_BUILTIN, use that too
-        #ifdef LED_BUILTIN
-            // communicate the fault to the user using a half second pulse
-            digitalWrite(LED_BUILTIN, 1);
-            delay(500);
-            digitalWrite(LED_BUILTIN, 0);
-            delay(500);
-
-            // communicate the faulty task using a series of short blinks to indicate which task.
-            // unfortunately, since there is such a thing as task 0, the number of blinks will be equal to the task id + 1.
-            for (int i = 0; i <= curr; i++) {
-                digitalWrite(LED_BUILTIN, 1);
-                delay(100);
-                digitalWrite(LED_BUILTIN, 0);
-                delay(100);
-            }
-        #endif
-        // delay for 1 second between communication attempts
-        delay(1000);
-    }
-}
-//*/
-
 /*
 ########  ######## ##          ###    ##    ##  ######
 ##     ## ##       ##         ## ##    ##  ##  ##    ##
@@ -228,22 +155,22 @@ void ARDRTOS_STACK_OVERFLOW_EX() {
 void Scheduler::delay(unsigned long ms) {
     unsigned long calledTime = millis();
     while (millis() - calledTime <= ms){
-        yield();
+        Scheduler::yield();
     }
 }
 
 void Scheduler::delayMicroseconds(unsigned long us) {
     unsigned long calledTime = micros();
     while (micros() - calledTime <= us){
-        yield();
+        Scheduler::yield();
     }
 }
 
-void Scheduler::delayUntill(unsigned long ms) {
+void Scheduler::delayUntil(unsigned long ms) {
     delay(ms-millis());
 }
 
-void Scheduler::delayUntillMicroseconds(unsigned long us) {
+void Scheduler::delayUntilMicroseconds(unsigned long us) {
     delayMicroseconds(us-micros());
 }
 
@@ -251,3 +178,27 @@ TaskID Scheduler::getTaskID() {
     // tasks start at index 0
     return curr;
 }
+
+/**
+ * MIT License
+ * 
+ * Copyright (c) 2022 Alex Olson
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */

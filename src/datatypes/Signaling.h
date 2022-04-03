@@ -1,3 +1,13 @@
+/**
+ * @file Signaling.h
+ * @author Alex Olson (aolson1714@gmail.com)
+ * @brief provides a suite of signaling mechanism for users.
+ * @version 0.1
+ * @date 2022-04-03
+ * 
+ * @copyright MIT Copyright (c) 2022 Alex Olson. All rights reserved. details at bottom of file.
+ */
+
 #ifndef __DATATYPES_MUTEX_H__
 #define __DATATYPES_MUTEX_H__
 
@@ -6,7 +16,9 @@ class _Locking {
 public:
     virtual void lock();
     virtual bool lockImmediate();
-    virtual void unlock();
+    virtual bool unlock();
+    virtual bool available();
+    virtual TaskID getOwner();
 };
 
 /*
@@ -44,17 +56,13 @@ public:
     Semaphore() : _lock(true) , _locking_task(0xFF) {};
 
     /**
-     * @brief blocks the current task untill a lock can be aquired
+     * @brief blocks the current task until a lock can be acquired
      * 
      */
     void lock() {
         // interrupts are not alloud while mutexes are being sorted out
         noInterrupts();
-        // this is to prevent double locking one mutex from one task;
-        TaskID tid = OS.getTaskID();
-        if(_locking_task == tid ) {
-            return;
-        }
+
         // attempt to lock forever;
         while (!_lock) {
             OS.yield();
@@ -66,16 +74,16 @@ public:
         // update lock
         _lock = false;
         // update locking task
-        _locking_task = tid;
+        _locking_task = OS.getTaskID();
         // return, enabling interrupts too
         interrupts();
     }
 
     /**
-     * @brief blocks the current task untill a lock is aquired or times out
+     * @brief blocks the current task until a lock is acquired or times out
      * 
-     * @param timeout the amout of time before this stops attempting to aquire the lock;
-     * @return true lock successfully aquired
+     * @param timeout the amount of time before this stops attempting to acquire the lock;
+     * @return true lock successfully acquired
      * @return false timed out
      */
     bool lock(unsigned long long timeout) {
@@ -83,17 +91,9 @@ public:
         timeout += millis();
         noInterrupts();
 
-        // this is to prevent double locking one mutex from one task;
-        TaskID tid = OS.getTaskID();
-        if(_locking_task == tid) {
-            interrupts();
-            // this true signifies that you already have the lock... dumbass...
-            return true;
-        }
-
         while (!_lock ) {
+            interrupts();
             if (timeout < millis()) {
-                interrupts();
                 return false;
             }
             OS.yield();
@@ -107,7 +107,7 @@ public:
             // update lock
         _lock = false;
         // update locking task
-        _locking_task = tid;
+        _locking_task = OS.getTaskID();
         // enable interrupts
         interrupts();
         // return successful lock
@@ -123,15 +123,10 @@ public:
     bool lockImmediate() {
         // interrupts are not alloud while mutexes are being sorted out
         noInterrupts();
-        // this is to prevent double locking one mutex from one task;
-        TaskID tid = OS.getTaskID();
-        if(_locking_task == tid) {
-            interrupts();
-            return true;
-        }
+        
         if(_lock) {
             _lock = false;
-            _locking_task = tid;
+            _locking_task = OS.getTaskID();
             interrupts();
             return true;
         } else {
@@ -144,11 +139,18 @@ public:
      * @brief frees the lock
      * 
      */
-    void unlock() {
+    bool unlock() {
+        // interrupts are not alloud while mutexes are being sorted out
         noInterrupts();
+        // check to see if we own the semaphore
+        if (_locking_task != OS.getTaskID()) {
+            return false;
+        }
+        // free the lock
         _locking_task = 0xFF;
         _lock = true;
         interrupts();
+        return true;
     }
 
 
@@ -159,9 +161,15 @@ public:
      * @return false not available
      */
     bool available() {return _lock;};
+
+    /**
+     * @brief returns the task that currently owns the lock
+     * 
+     * @return TaskID the task that owns the lock
+     */
+    TaskID getOwner() {return _locking_task;};
 };
 
-#ifndef COOP_ONLY
 /*
 888b     d888 888     888 88888888888 8888888888 Y88b   d88P
 8888b   d8888 888     888     888     888         Y88b d88P
@@ -172,7 +180,8 @@ public:
 888   "   888 Y88b. .d88P     888     888         d88P Y88b
 888       888  "Y88888P"      888     8888888888 d88P   Y88b
 */
-// since priorities are not a thing in cooporative Operating systems, this is simply a placeholder for the Preemptive version.
+#ifndef COOP_ONLY
+// since priorities are not a thing in cooperative Operating systems, this is simply a placeholder for the Preemptive version.
 typedef Semaphore Mutex;
 #else
 // because the OS is limited to coop only, the mutexes and semaphores become practically the same.
@@ -220,3 +229,27 @@ public:
 };
 
 #endif // !__DATATYPES_MUTEX_H__
+
+/**
+ * MIT License
+ * 
+ * Copyright (c) 2022 Alex Olson
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
