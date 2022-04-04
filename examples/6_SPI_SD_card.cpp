@@ -1,5 +1,5 @@
 /**
- * @file [DOC] 6_SPI_SD_card.cpp
+ * @file 6_SPI_SD_card.cpp
  * @author Alex Olson (aolson1714@gmail.com)
  * @brief demonstrate interfacing with external hardware
  * @version 0.1
