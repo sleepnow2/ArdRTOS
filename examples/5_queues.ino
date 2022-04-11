@@ -19,7 +19,6 @@
  *      None
  */
 
-//*
 #include <Arduino.h>
 #include "ArdRTOS.h"
 

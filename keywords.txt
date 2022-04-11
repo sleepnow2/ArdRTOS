@@ -1,14 +1,13 @@
 # Syntax Coloring Map For ArdRTOS
 
 # Datatypes (KEYWORD1)
+TaskID  KEYWORD1
+Scheduler   KEYWORD1
 
 # Methods and Functions (KEYWORD2)
 addTask KEYWORD2
-yield   KEYWORD2
-delay   KEYWORD2
-delayUntil  KEYWORD2
-delayMicroseconds   KEYWORD2
-delayUntilMicroseconds  KEYWORD2
+getTaskID   KEYWORD2
+# delays + yield are standard syntax highlight
 
 # Instances (KEYWORD2)
 OS  KEYWORD2

@@ -101,7 +101,7 @@ void Scheduler::addTask(osFuncCall loop, unsigned stackSize) {
     numt = n + 1;
 }
 
-void Scheduler::addTask(osFuncCallArg loop, void *arg, unsigned stackSize) {
+__ATTR_NORETURN__ void Scheduler::addTask(osFuncCallArg loop, void *arg, unsigned stackSize) {
     addTask((osFuncCall)loop, stackSize);
     tasks[numt-1].arg = arg;
 }
