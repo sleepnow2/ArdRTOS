@@ -11,12 +11,12 @@ The folder named "examples" is full of examples to use as a short tutorial to us
 ___
 ## __Feature Road Map__
 - [X] (alpha) get the kernel working
-        - [X] cooperative OS to work
-        - [X] preemptive OS to work (CANCELED)
+    - [X] cooperative OS to work
+    - [X] preemptive OS to work (CANCELED)
 - [X] (beta) get intra task communication and synchronization
-        - [X] queues
-        - [X] stacks
-        - [X] semaphores/Mutexes
+    - [X] queues
+    - [X] stacks
+    - [X] semaphores/Mutexes
 - [X] (1.0) generate documentation and examples
     - [X] dyoxygen documentation for entire project
     - [X] examples for every major aspect of the RTOS
@@ -27,9 +27,6 @@ ___
         - [X] Stacks
         - [X] Queues
         - [X] Semaphores
-- [ ] Stack overflow detection
-    - [ ] manual
-    - [ ] automatic (include into kernel)
 - [ ] ESP support
     - [ ] ESP8266 support
     - [ ] ESP32 support

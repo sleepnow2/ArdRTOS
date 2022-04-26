@@ -101,13 +101,13 @@ void Scheduler::addTask(osFuncCall loop, unsigned stackSize) {
     numt = n + 1;
 }
 
-__ATTR_NORETURN__ void Scheduler::addTask(osFuncCallArg loop, void *arg, unsigned stackSize) {
+void Scheduler::addTask(osFuncCallArg loop, void *arg, unsigned stackSize) {
     addTask((osFuncCall)loop, stackSize);
     tasks[numt-1].arg = arg;
 }
 
 // NOOP is justified because alloca will be whisked away if we dont, and we dont want that.
-NOOP void Scheduler::begin() {
+__ATTR_NORETURN__ NOOP void Scheduler::begin() {
     // transfer from describing how much space they want into 
     for(curr = 0; curr < numt; curr++) {
         // after initializing a stack, move up by the stack size you want
