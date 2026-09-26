@@ -149,6 +149,16 @@ __ATTR_NORETURN__ NOOP void Scheduler::begin() {
     longjmp(tasks[0].jb, 1);
 }
 
+void Scheduler::TEST_UTIL_CLEAN_OS() {
+    // clean off our count of tasks.
+    currentTaskID = 0;
+    numberActiveTasks = 0;
+    // clean off all of the tasks.
+    for (_TASK &t : tasks) {
+        t = _TASK{nullptr, nullptr, 0, _jmp_buf{}};
+    }
+}
+
 /*
 ########  ######## ##          ###    ##    ##  ######
 ##     ## ##       ##         ## ##    ##  ##  ##    ##

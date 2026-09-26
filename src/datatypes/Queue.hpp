@@ -34,13 +34,12 @@ protected:
      */
     ITERATOR_TYPE next(ITERATOR_TYPE &input) {
         input++;
-        if (input >= MAX_SIZE) { 
+        if (input >= MAX_SIZE) {
             input = 0;
-            return input;
+            return MAX_SIZE-1;
         }
         return input-1;
     }
-
 public:
     LOCK_TYPE _lock; // the locking device used to threadsafe the queue
 
@@ -119,7 +118,7 @@ public:
 
     ITERATOR_TYPE size() {return _count;}
     bool isEmpty() {return _count == 0;}
-    bool isFull() {return _count == MAX_SIZE;}
+    bool isFull() {return _count >= MAX_SIZE;}
 };
 
 #endif // !__DATATYPES_QUEUE_H__

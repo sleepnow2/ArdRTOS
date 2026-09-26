@@ -99,6 +99,10 @@ public:
 	 * @return uint8_t 
 	 */
 	static TaskID getTaskID();
+
+
+	static void TEST_UTIL_CLEAN_OS();
+
 };
 
 #endif /* SCHEDULER_H_ */
