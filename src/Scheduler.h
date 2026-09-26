@@ -1,9 +1,9 @@
 /**
  * @file scheduler.h
- * @author Alex Olson (aolson1714@gmail.com)
+ * @author Alex Olson (sleepnow2@gmail.com)
  * @brief handles the scheduler class. This is the main interface with the kernel.
- * @version 0.1
- * @date 2021-05-04
+ * @version 0.2
+ * @date 2026-09-24
  * 
  * @copyright MIT Copyright (c) 2022 Alex Olson. All rights reserved. details at bottom of file.
  */

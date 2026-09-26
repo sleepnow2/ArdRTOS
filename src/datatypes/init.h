@@ -1,6 +1,6 @@
 /**
  * @file init.h
- * @author Alex Olson (aolson1714@gmail.com)
+ * @author Alex Olson (sleepnow2@gmail.com)
  * @brief internal header file to initialize datatypes in the correct order
  * @version 0.1
  * @date 2022-04-03

@@ -1,6 +1,6 @@
 /**
  * @file scheduler.cpp
- * @author Alex Olson (aolson1714@gmail.com)
+ * @author Alex Olson (sleepnow2@gmail.com)
  * @brief this contains the main kernel for ArdRTOS, the scheduler class and the ISR to operate the context switcher
  * @version 0.1
  * @date 2021-05-04

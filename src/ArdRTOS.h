@@ -1,6 +1,6 @@
 /**
  * @file ArdRTOS.h
- * @author Alex Olson (aolson1714@gmail.com)
+ * @author Alex Olson (sleepnow2@gmail.com)
  * @brief this file handles all of the defines, typedefs, and the scheduler class
  * @version 0.1
  * @date 2021-05-04

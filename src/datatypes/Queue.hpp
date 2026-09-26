@@ -1,9 +1,9 @@
 /**
  * @file Queue.h
- * @author Alex Olson (aolson1714@gmail.com)
+ * @author Alex Olson (sleepnow2@gmail.com)
  * @brief provides a queue class for users.
- * @version 0.1
- * @date 2022-04-03
+ * @version 0.2
+ * @date 2026-09-24
  * 
  * @copyright MIT Copyright (c) 2022 Alex Olson. All rights reserved. details at bottom of file.
  */
