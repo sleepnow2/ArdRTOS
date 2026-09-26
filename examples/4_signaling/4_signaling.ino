@@ -1,6 +1,6 @@
 /**
  * @file 4_signaling.cpp
- * @author Alex Olson (aolson1714@gmail.com)
+ * @author Alex Olson (sleepnow2@gmail.com)
  * @brief how to use semaphores to protect external resources
  * @version 0.1
  * @date 2022-03-23
@@ -72,8 +72,8 @@ Mutex SerialLock;
 void loop1() {
     // here, we wait until we acquire serial for ourselves.
     // since, we acquired the lock first, we get to go ahead. 
-    // however, in our second loop, it attempts to acquire the lock we already have, so it locks up waiting on itself to release the lock.
-    // this causes this task to deadlock and never work from this point on, causing every task waiting on this mutex to also deadlock.
+    // however, in our second loop, it attempts to acquire the lock we already have.
+    // this doesn't work for us because loop 2 will never get to tell us good morning!
     SerialLock.lock();
     Serial.write("hello from loop1!");
     OS.delay(100);

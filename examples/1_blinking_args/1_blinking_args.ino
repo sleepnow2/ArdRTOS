@@ -1,11 +1,11 @@
 /**
  * @file 1_blinking_args.cpp
- * @author Alex Olson (aolson1714@gmail.com)
+ * @author Alex Olson (sleepnow2@gmail.com)
  * @brief demonstrate how to pass arguments to tasks
- * @version 0.1
- * @date 2022-03-23
+ * @version 0.2
+ * @date 2026-09-25
  * 
- * @copyright MIT Copyright (c) 2022 Alex Olson. All rights reserved. details at bottom of file.
+ * @copyright MIT Copyright (c) 2026 Alex Olson. All rights reserved. details at bottom of file.
  * 
  *  Purpose:
  *      To demonstrate how to set pass basic arguments to tasks
@@ -25,15 +25,14 @@
 // you can use structures/classes to pass large amounts of data in one pointer.
 struct BlinkInputStruct{
     unsigned char LED;
-    unsigned char GND;
     unsigned long DELAY;
 };
 
 // structure initialization
 
-BlinkInputStruct BIS1 = {3, 0, 100};
-BlinkInputStruct BIS2 = {5, 0, 200};
-BlinkInputStruct BIS3 = {6, 0, 300};
+BlinkInputStruct BIS1 = {0, 200};
+BlinkInputStruct BIS2 = {1, 400};
+BlinkInputStruct BIS3 = {13, 800};
 
 void blink(void*);
 
@@ -42,43 +41,48 @@ void blink(void*);
  * 
  */
 void setup() {
-    Serial.begin(115200);
-
-    OS.addTask(blink, &BIS1, 128);
-    OS.addTask(blink, &BIS2, 128);
-    OS.addTask(blink, &BIS3, 128);
+    OS.addTask(blink, &BIS1, 256);
+    OS.addTask(blink, &BIS2, 256);
+    OS.addTask(blink, &BIS3, 256);
     
     OS.begin();
     // program never gets here
 }
 
+/*
+void loop() {
+  // proof we can delete this with no concequences!
+}
+*/
+
 /**
  * @brief 
  * 
- * @param bis_inp a pointer to the argument. In this instance, it is a pointer to 
+ * @param bis_inp a pointer to the argument. In this instance, it is a pointer to the data structure we want to pass it.
  */
 void blink(void* bis_inp) {
+    // task setup
     BlinkInputStruct bis = *(BlinkInputStruct*)bis_inp;
-    Serial.print(bis.DELAY);
-    Serial.flush();
-    // setup
+
+    // this will be used later to make sure our blinking lights do not slowly drift off.
+    uint32_t last_blink = 1000;
     pinMode(bis.LED, OUTPUT);
-    if (bis.GND) {
-        pinMode(bis.GND, OUTPUT);
-        digitalWrite(bis.GND, 0);
-    }
 
     // task main loop
     for(;;){
-        digitalWrite(bis.LED, 1); OS.delay(bis.DELAY);
-        digitalWrite(bis.LED, 0); OS.delay(bis.DELAY);
+        // delayUntil works exactly like you think it does. 
+        // It waits until millis() is exactly this value before resuming task behavior!
+        OS.delayUntil(last_blink += bis.DELAY);
+        digitalWrite(bis.LED, 0); 
+        OS.delayUntil(last_blink += bis.DELAY);
+        digitalWrite(bis.LED, 1); 
     }
 }
 
 /**
  * MIT License
  * 
- * Copyright (c) 2022 Alex Olson
+ * Copyright (c) 2026 Alex Olson
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal

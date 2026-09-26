@@ -21,6 +21,7 @@
 //#defined NO_PRIORITIES
 //! SETTINGS END
 
+
 #include <Arduino.h>
 
 typedef void (*osFuncCall)(void);

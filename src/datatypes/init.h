@@ -37,9 +37,9 @@ namespace __DATATYPES__HELPER__ {
 // used to hide the jumble from users
 #define __IT_TYPE__(v) typename __DATATYPES__HELPER__::Index<(v<UINT8_MAX-1),(v<UINT16_MAX-1)>::Type
 
-#include "datatypes/Signaling.h"
-#include "datatypes/Queue.h"
-#include "datatypes/Stack.h"
+#include "datatypes/Signaling.hpp"
+#include "datatypes/Queue.hpp"
+#include "datatypes/Stack.hpp"
 
 #endif
 

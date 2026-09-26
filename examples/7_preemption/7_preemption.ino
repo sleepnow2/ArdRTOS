@@ -1,6 +1,6 @@
 /**
  * @file 7_preemption.cpp
- * @author Alex Olson (aolson1714@gmail.com)
+ * @author Alex Olson (sleepnow2@gmail.com)
  * @brief this example uses 1_blinking_args.cpp as a base to allow for users to build their own preemptive kernel.
  * @version 0.1
  * @date 2022-03-23
@@ -54,7 +54,7 @@ void blink(void*);
  * 
  */
 void setup() {
-    // dissable interrupts as it would be disastrous if it tried to switch context durring setup.
+    // disable interrupts as it would be disastrous if it tried to switch context durring setup.
     noInterrupts();
 
     // set overflowA num for timer 0
@@ -88,8 +88,10 @@ void blink(void* bis_inp) {
     // task main loop
     for(;;){
         // notice how it is delay instead of OS.delay.
-        // if preemption was not enabled, this would never pass processor time off to 
-        // the other tasks.
+        // if preemption was not working, this would never pass processor time off to the other tasks.
+        // this is because the default delay does not pass context to the other processes.
+        // it is still HIGHLY suggested to use OS.delay instead, as you do not spend an entire ISR cycle just sleeping
+        //      when other tasks could be working right now.
         digitalWrite(bis.LED, 1); delay(bis.DELAY);
         digitalWrite(bis.LED, 0); delay(bis.DELAY);
     }

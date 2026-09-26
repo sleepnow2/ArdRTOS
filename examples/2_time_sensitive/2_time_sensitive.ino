@@ -1,6 +1,6 @@
 /**
  * @file 2_time_Sensitive.cpp
- * @author Alex Olson (aolson1714@gmail.com)
+ * @author Alex Olson (sleepnow2@gmail.com)
  * @brief how to block interrupts for a period of time
  * @version 0.1
  * @date 2022-03-23
@@ -51,10 +51,10 @@ void setup() {
 
 /**
  * @brief measures the distance between a HC-SR04 ultrasonic distance sensor and the surface in front of it.
- *  After measureing the distance, save it to "dist" in mm
+ *  After measuring the distance, save it to "dist" in mm
  */
 void distance() {
-    // dissable interrupts because the next block is very time sensitive.
+    // disable interrupts because the next block is very time sensitive.
     noInterrupts();
     digitalWrite(trigger, LOW);
     delayMicroseconds(2);
@@ -67,9 +67,9 @@ void distance() {
     // we then need to divide that answer by to to get the distance out instead of distance for a round trip.
     dist = pulseIn(echo, HIGH)*SOS/2;
     
-    // reinable interrupts. 
+    // reenable interrupts. 
     // This is important because OS.delay relies on millis() which depends on an internal interrupt.
-    // if you do not reinable interrupts, this task will freeze until interrupts are enabled again.
+    // if you do not reenable interrupts, this task will freeze until interrupts are enabled again.
     interrupts();
 
     // wait till next sensor reading

@@ -1,6 +1,6 @@
 /**
  * @file 3_interrupts.cpp
- * @author Alex Olson (aolson1714@gmail.com)
+ * @author Alex Olson (sleepnow2@gmail.com)
  * @brief The goal of this example is to teach how to interract with the operating system through interrups.
  * @version 0.1
  * @date 2022-03-23

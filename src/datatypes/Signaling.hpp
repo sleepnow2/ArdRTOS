@@ -11,6 +11,9 @@
 #ifndef __DATATYPES_MUTEX_H__
 #define __DATATYPES_MUTEX_H__
 
+#define NULL_TASK 0xff
+
+
 // hide it away from the users. they dont need to know.
 class _Locking {
 public:
@@ -37,46 +40,26 @@ Y88b  d88P 888        888   "   888  d8888888888 888        888    888 Y88b. .d8
  * 
  */
 class Semaphore: public _Locking {
-private:
-
-    // whether or not the token is available for locking
-    // true = _lock available for locking
-    // false = _lock taken
-    volatile bool _lock;
-
+protected:
     // the task that locked the task. this is a utility to prevent a task from getting blocked attempting to re-lock a resource
     volatile TaskID _locking_task;
-
 public:
 
     /**
      * @brief Construct a new Mutex object
      * 
      */
-    Semaphore() : _lock(true) , _locking_task(0xFF) {};
+    Semaphore() : _locking_task(NULL_TASK) {};
 
     /**
      * @brief blocks the current task until a lock can be acquired
      * 
      */
     void lock() {
-        // interrupts are not alloud while mutexes are being sorted out
-        noInterrupts();
-
         // attempt to lock forever;
-        while (!_lock) {
+        while (!lockImmediate()) {
             OS.yield();
-            // interrups are enabled after OS.yield(), so
-            // we must dissable interrupts before we continue to prevent
-            // data from changing while we are working on it
-            noInterrupts();
         }
-        // update lock
-        _lock = false;
-        // update locking task
-        _locking_task = OS.getTaskID();
-        // return, enabling interrupts too
-        interrupts();
     }
 
     /**
@@ -86,31 +69,17 @@ public:
      * @return true lock successfully acquired
      * @return false timed out
      */
-    bool lock(unsigned long long timeout) {
+    bool lock(uint64_t timeout) {
         // set a timeout time.
         timeout += millis();
-        noInterrupts();
 
-        while (!_lock ) {
-            interrupts();
-            if (timeout < millis()) {
+        while (!lockImmediate() ) {
+            if (timeout - millis() > 0) {
+                // return unsuccessful lock
                 return false;
             }
             OS.yield();
-            // interrups are enabled after OS.yield(), so
-            // we must dissable interrupts before we continue to prevent
-            // data from changing while we are working on it
-            // here is where the ISR pertaining to millis has a chance to fire
-            // dissallow interrupts so that we can not be interrupted when checking for the lock again
-            noInterrupts();
         }
-            // update lock
-        _lock = false;
-        // update locking task
-        _locking_task = OS.getTaskID();
-        // enable interrupts
-        interrupts();
-        // return successful lock
         return true;
     }
 
@@ -121,11 +90,9 @@ public:
      * @return false lock not available
      */
     bool lockImmediate() {
-        // interrupts are not alloud while mutexes are being sorted out
+        // interrupts are not allowed while mutexes are being sorted out
         noInterrupts();
-        
-        if(_lock) {
-            _lock = false;
+        if(_locking_task == NULL_TASK) {
             _locking_task = OS.getTaskID();
             interrupts();
             return true;
@@ -140,15 +107,15 @@ public:
      * 
      */
     bool unlock() {
-        // interrupts are not alloud while mutexes are being sorted out
+        // interrupts are not allowed while mutexes are being sorted out
         noInterrupts();
         // check to see if we own the semaphore
         if (_locking_task != OS.getTaskID()) {
+            interrupts();
             return false;
         }
         // free the lock
-        _locking_task = 0xFF;
-        _lock = true;
+        _locking_task = NULL_TASK;
         interrupts();
         return true;
     }
@@ -160,7 +127,7 @@ public:
      * @return true available
      * @return false not available
      */
-    bool available() {return _lock;};
+    bool available() {return _locking_task == NULL_TASK;};
 
     /**
      * @brief returns the task that currently owns the lock
@@ -204,9 +171,9 @@ typedef Semaphore Mutex;
  * does not support Timeout and will block forever if not properly used
  */
 class LockGuard {
-private:
+protected:
     // a pointer to the mutex that we are locking and unlocking 
-    _Locking* _m;
+    _Locking* _lock;
 public:
 
     /**
@@ -217,7 +184,7 @@ public:
      */
     LockGuard(_Locking &m) {
         m.lock();
-        _m = &m;
+        _lock = &m;
     }
 
     /**
@@ -225,7 +192,7 @@ public:
      * this can be called directly or can be called by the compiler when going out of scope
      * 
      */
-    ~LockGuard() {_m->unlock();}
+    ~LockGuard() {_lock->unlock();}
 };
 
 #endif // !__DATATYPES_MUTEX_H__

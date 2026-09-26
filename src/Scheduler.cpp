@@ -47,10 +47,12 @@ struct _TASK {
 } tasks[ARDRTOS_TASK_COUNT];
 
 // the current task
-volatile uint8_t curr = 0;
+volatile uint8_t currentTaskID = 0;
 
 // the number of tasks
-volatile uint8_t numt = 0;
+volatile uint8_t numberActiveTasks = 0;
+
+volatile bool busy = false;
 
 /**
  ######   #######  ##    ## ######## ######## ##     ## ########     ######  ##      ## #### ########  ######  ##     ## ######## ########
@@ -63,16 +65,16 @@ volatile uint8_t numt = 0;
 */
 
 void Scheduler::yield() {
-    noInterrupts();
-    if (setjmp(tasks[curr].jb) == 0) {
-        if (curr == 0) {
-            curr = numt;
+    //noInterrupts();
+    if (setjmp(tasks[currentTaskID].jb) == 0) {
+        if (currentTaskID == 0) {
+            currentTaskID = numberActiveTasks;
         } else {
-            curr--;
+            currentTaskID--;
         }
-        longjmp(tasks[curr].jb, 1);
+        longjmp(tasks[currentTaskID].jb, 1);
     }
-    interrupts();
+    //interrupts();
 }
 
 /**
@@ -89,54 +91,59 @@ Scheduler::Scheduler() {
 }
 
 void Scheduler::addTask(osFuncCall loop, unsigned stackSize) {
-    //grab the value of numt and store it
-    unsigned char n = numt;
     // save the pointer to the function to loop over
-    tasks[n].fc = loop;
-    tasks[n].arg = (void*)0;
+    tasks[numberActiveTasks].fc = loop;
+    tasks[numberActiveTasks].arg = nullptr;
     // save how big you want the stack to be
-    tasks[n].ss = stackSize + _JBLEN;
+    tasks[numberActiveTasks].ss = stackSize + _JBLEN;
 
-    // increment numt
-    numt = n + 1;
+    // increment numberActiveTasks
+    numberActiveTasks++;
 }
 
 void Scheduler::addTask(osFuncCallArg loop, void *arg, unsigned stackSize) {
     addTask((osFuncCall)loop, stackSize);
-    tasks[numt-1].arg = arg;
+    tasks[numberActiveTasks-1].arg = arg;
 }
 
 // NOOP is justified because alloca will be whisked away if we dont, and we dont want that.
 __ATTR_NORETURN__ NOOP void Scheduler::begin() {
     // transfer from describing how much space they want into 
-    for(curr = 0; curr < numt; curr++) {
-        // after initializing a stack, move up by the stack size you want
-        if(curr != 0) {
-            alloca(tasks[curr-1].ss);
+    for(currentTaskID = 0; currentTaskID < numberActiveTasks; currentTaskID++) {
+        // clear the previous task by how much space it wants.
+        // if you are the first task, obviously you dont need to clear nobody. 
+        if(currentTaskID != 0) {
+            // alloca is on the stack, not the heap.
+            alloca(tasks[currentTaskID-1].ss);
         }
 
-        if(setjmp(tasks[curr].jb) == 1) {
+        // if this is our second time here, it means we jumped in from another context!
+        // that other context could be the context switcher, or it could be 
+        if(setjmp(tasks[currentTaskID].jb) == 1) {
             interrupts();
-            if (tasks[curr].arg != 0){
-                // slight optimization since curr will be the same for this task for the rest of time.
-                osFuncCallArg t = (osFuncCallArg)tasks[curr].fc;
-                void* a = tasks[curr].arg;
+            if (tasks[currentTaskID].arg != nullptr){
+                // slight optimization since currentTaskID will be the same for this task for the rest of time.
+                // turns out, this optimization runs into an issue with "C++26: Trivial infinite loops are no longer undefined behaviour"
+                // Thanks. sure. They are no longer undefined behavior, they are now just broken for me in very VERY niche tasks
+                // osFuncCallArg task = (osFuncCallArg)tasks[currentTaskID].fc;
+                void* argument = tasks[currentTaskID].arg;
                 while (true) {
-                    t(a);
+                    ((osFuncCallArg)tasks[currentTaskID].fc)(argument);
                     OS.yield();
                 }
             } else {
                 while (true) {
-                    tasks[curr].fc();
+                    tasks[currentTaskID].fc();
                     OS.yield();
                 }
             }
         }
     }
 
-    // write to memory
-    numt = numt-1;
-    curr = 0;
+    // when we get done looping, this is an optimization.
+    // now, this is the index of the last active task.
+    numberActiveTasks = numberActiveTasks-1;
+    currentTaskID = 0;
 
     // start the OS
     longjmp(tasks[0].jb, 1);
@@ -176,7 +183,7 @@ void Scheduler::delayUntilMicroseconds(unsigned long us) {
 
 TaskID Scheduler::getTaskID() {
     // tasks start at index 0
-    return curr;
+    return currentTaskID;
 }
 
 /**

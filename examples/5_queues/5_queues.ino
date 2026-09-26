@@ -20,23 +20,34 @@
  */
 
 #include <Arduino.h>
-#include "ArdRTOS.h"
+#include <ArdRTOS.h>
+
+#define QUEUE_MAX_SIZE 5
+#define QUEUE_DELAY 100
+#define CONSUME_DELAY 1000
+#define TASK_COUNT 20
+
+
+struct SimulatedProcess {
+	uint32_t waitTime;
+	uint32_t id;
+};
 
 // a queue for storing how long processor should wait before printing.
-Queue<unsigned long> toWait;
+Queue<SimulatedProcess, QUEUE_MAX_SIZE> pipe;
 // a semaphore for controlling access to the serial port.
 Semaphore serialSemaphore;
 
-// this function will parse serial input and store the time to wait in the queue.
-void SerialInput();
+// this function will queue up some dummy data as defined above.
+void TaskQueuer();
 // this function will wait for the specified amount of time and then print it.
 void Processor();
 
 void setup() {
-    Serial.begin(115200);
+    Serial.begin(9600);
 
-    OS.addTask(SerialInput, 200);
-    OS.addTask(Processor, 200);
+    OS.addTask(TaskQueuer, 0x80);
+    OS.addTask(Processor, 0x80);
     
     while (!Serial) {
         // wait for serial to be ready
@@ -46,72 +57,63 @@ void setup() {
     // if everything works correctly, this will never get past OS.begin().
 }
 
-void SerialInput() {
-    static unsigned long inum;
-    // first, lock the serial port so we can use this resource
-    serialSemaphore.lock();
+void TaskQueuer() {
+	static uint32_t i = 0;
+	if (i >= TASK_COUNT) {
+		return;
+	}
 
-    // check to see if characters are available
-    if (Serial.available()) {
-        char inp = Serial.read();
-        Serial.print(inp); // echo the character back to the terminal
+	serialSemaphore.lock();
+	Serial.print("--> Process "); 
+	Serial.print(i); 
+	Serial.println(" will take a bit to process");
+	serialSemaphore.unlock();
+	
+    // This has a native mutex, guarenteeing that it will be threadsafe * **.
+    // * with preemtive interrupts shown on example 7
+    // ** in single core processors. I do not know how to make multi-core mutexes.
+	pipe.push(SimulatedProcess{CONSUME_DELAY, i++});
 
-        // if it is a digit, keep feeding those digits into a number.
-        if (isDigit(inp)) {
-            inum *= 10;
-            inum += inp-'0';
-        }
-        // otherwise, pass that number off to the fibonacci process.
-        else {
-            Serial.println();
-            Serial.print("taken number: ");
-            Serial.println(inum);
-            // since enqueue handles locking and unlocking, it is not necessary to 
-            // get the lock for this and lock it.
-            toWait.enqueue(inum);
-            inum = 0;
-        }
-    }
-    serialSemaphore.unlock();
-    OS.yield();
+	serialSemaphore.lock();
+	Serial.print("### There are ");
+	Serial.print(pipe.size());
+	Serial.println(" tasks in the queue");
+	serialSemaphore.unlock();
+
+
+	OS.delay(QUEUE_DELAY);
 }
 
 void Processor() {
-    // lock the queue so we can use it.
-    toWait.lock();
-    // if there is something in the queue, process it.
-    if (!toWait.isEmpty()) {
-        unsigned long inp = toWait.dequeue();
-        // once we have the number, unlock the queue.
-        toWait.unlock();
+    // this process will block until there is data. 
+    // this behavior is changed as of 2.0.0 release for simplicity of use.
+    // be careful, if there is nothing pushing data to this, then it will block forever.    
+	SimulatedProcess inp = pipe.pop();
+	    // lock the serial port so we can use it.
+    serialSemaphore.lock();    
+    Serial.print("<-- Process ");
+	Serial.print(inp.id);
+	Serial.println(" started");
+    // unlock the serial port so other tasks can use it.
+    serialSemaphore.unlock();
 
-        // this demo will not use OS.delay for this in order to demonstrate how to make a task interruptable.
-        
-        // wait for the specified amount of time.
-        unsigned long start = millis();
-        while (millis() - start < inp) {
-            // OS.yield() can be used to break up a larger computation into smaller pieces in order to allow other tasks to run.
-            OS.yield();
-        }
+    OS.delay(inp.waitTime);
 
-        // lock the serial port so we can use it.
-        serialSemaphore.lock();
-        Serial.print("Processor waited for ");
-        Serial.print(inp);
-        Serial.println(" ms");
-        // unlock the serial port so other tasks can use it.
-        serialSemaphore.unlock();
-    }
-    // unlocking a semaphore only works if we currently own it, so feel free to spam it.
-    // it also returns whether the unlock was successful.
-    toWait.unlock();
-    OS.yield();
+    // lock the serial port so we can use it.
+    serialSemaphore.lock();    
+    Serial.print("<-- Process ");
+	Serial.print(inp.id);
+	Serial.print(" waited for ");
+    Serial.print(inp.waitTime);
+    Serial.println(" ms");
+    // unlock the serial port so other tasks can use it.
+    serialSemaphore.unlock();
 }
 
 /**
  * MIT License
  * 
- * Copyright (c) 2022 Alex Olson
+ * Copyright (c) 2026 Alex Olson
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
