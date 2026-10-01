@@ -49,10 +49,10 @@ public:
      * @brief Create a task to be ran with the given argument. 
      * 
      * @param loop the loop function to use
-	 * @param arg a pointer to the argument to feed the function
+	 * @param argument a pointer to the argument to feed the function
      * @param stackSize how much memory you are going to use for this task
      */
-    static void addTask(osFuncCallArg loop, void *arg, unsigned stackSize=0x40);
+    static void addTask(osFuncCallArg loop, void *argument, unsigned stackSize=0x40);
 
     /**
      * @brief begins ArdRTOS after tasks are assigned

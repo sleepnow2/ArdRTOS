@@ -36,14 +36,14 @@ Scheduler OS;
 
 struct _TASK {
     // the function pointer to call
-    osFuncCall fc;
-    // the arg to pass if it exists. note, it must be a single void pointer, but
+    osFuncCall functionHandler;
+    // the argument to pass if it exists. note, it must be a single void pointer, but
     // it can be filled with a class, struct, or basic type if you want. 
-    void* arg;
+    void* argument;
     // stack size. this is used at the begining to set up the OS and for detecting stack overflow (future)
-    unsigned ss;
+    unsigned stackSize;
     // the jump buffer used to store cpu context and restore execution.
-    jmp_buf jb;
+    jmp_buf context;
 } tasks[ARDRTOS_TASK_COUNT];
 
 // the current task
@@ -66,13 +66,13 @@ volatile bool busy = false;
 
 void Scheduler::yield() {
     //noInterrupts();
-    if (setjmp(tasks[currentTaskID].jb) == 0) {
+    if (setjmp(tasks[currentTaskID].context) == 0) {
         if (currentTaskID == 0) {
             currentTaskID = numberActiveTasks;
         } else {
             currentTaskID--;
         }
-        longjmp(tasks[currentTaskID].jb, 1);
+        longjmp(tasks[currentTaskID].context, 1);
     }
     //interrupts();
 }
@@ -92,18 +92,18 @@ Scheduler::Scheduler() {
 
 void Scheduler::addTask(osFuncCall loop, unsigned stackSize) {
     // save the pointer to the function to loop over
-    tasks[numberActiveTasks].fc = loop;
-    tasks[numberActiveTasks].arg = nullptr;
+    tasks[numberActiveTasks].functionHandler = loop;
+    tasks[numberActiveTasks].argument = nullptr;
     // save how big you want the stack to be
-    tasks[numberActiveTasks].ss = stackSize + _JBLEN;
+    tasks[numberActiveTasks].stackSize = stackSize + _JBLEN;
 
     // increment numberActiveTasks
     numberActiveTasks++;
 }
 
-void Scheduler::addTask(osFuncCallArg loop, void *arg, unsigned stackSize) {
+void Scheduler::addTask(osFuncCallArg loop, void *argument, unsigned stackSize) {
     addTask((osFuncCall)loop, stackSize);
-    tasks[numberActiveTasks-1].arg = arg;
+    tasks[numberActiveTasks-1].argument = argument;
 }
 
 // NOOP is justified because alloca will be whisked away if we dont, and we dont want that.
@@ -114,26 +114,26 @@ NOOP void Scheduler::begin() {
         // if you are the first task, obviously you dont need to clear nobody. 
         if(currentTaskID != 0) {
             // alloca is on the stack, not the heap.
-            alloca(tasks[currentTaskID-1].ss);
+            alloca(tasks[currentTaskID-1].stackSize);
         }
 
         // if this is our second time here, it means we jumped in from another context!
         // that other context could be the context switcher, or it could be 
-        if(setjmp(tasks[currentTaskID].jb) == 1) {
+        if(setjmp(tasks[currentTaskID].context) == 1) {
             interrupts();
-            if (tasks[currentTaskID].arg != nullptr){
+            if (tasks[currentTaskID].argument != nullptr){
                 // slight optimization since currentTaskID will be the same for this task for the rest of time.
                 // turns out, this optimization runs into an issue with "C++26: Trivial infinite loops are no longer undefined behaviour"
                 // Thanks. sure. They are no longer undefined behavior, they are now just broken for me in very VERY niche tasks
-                // osFuncCallArg task = (osFuncCallArg)tasks[currentTaskID].fc;
-                void* argument = tasks[currentTaskID].arg;
+                // osFuncCallArg task = (osFuncCallArg)tasks[currentTaskID].functionHandler;
+                void* argument = tasks[currentTaskID].argument;
                 while (true) {
-                    ((osFuncCallArg)tasks[currentTaskID].fc)(argument);
+                    ((osFuncCallArg)tasks[currentTaskID].functionHandler)(argument);
                     OS.yield();
                 }
             } else {
                 while (true) {
-                    tasks[currentTaskID].fc();
+                    tasks[currentTaskID].functionHandler();
                     OS.yield();
                 }
             }
@@ -146,7 +146,7 @@ NOOP void Scheduler::begin() {
     currentTaskID = 0;
 
     // start the OS
-    longjmp(tasks[0].jb, 1);
+    longjmp(tasks[0].context, 1);
 }
 
 /// @brief Used to "reset" the OS when used in conjunction with Unity's TEST_PROTECT() and TEST_ABORT()
