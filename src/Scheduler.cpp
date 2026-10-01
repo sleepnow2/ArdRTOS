@@ -107,7 +107,7 @@ void Scheduler::addTask(osFuncCallArg loop, void *arg, unsigned stackSize) {
 }
 
 // NOOP is justified because alloca will be whisked away if we dont, and we dont want that.
-__ATTR_NORETURN__ NOOP void Scheduler::begin() {
+NOOP void Scheduler::begin() {
     // transfer from describing how much space they want into 
     for(currentTaskID = 0; currentTaskID < numberActiveTasks; currentTaskID++) {
         // clear the previous task by how much space it wants.
@@ -149,14 +149,11 @@ __ATTR_NORETURN__ NOOP void Scheduler::begin() {
     longjmp(tasks[0].jb, 1);
 }
 
+/// @brief Used to "reset" the OS when used in conjunction with Unity's TEST_PROTECT() and TEST_ABORT()
 void Scheduler::TEST_UTIL_CLEAN_OS() {
     // clean off our count of tasks.
     currentTaskID = 0;
     numberActiveTasks = 0;
-    // clean off all of the tasks.
-    for (_TASK &t : tasks) {
-        t = _TASK{nullptr, nullptr, 0, _jmp_buf{}};
-    }
 }
 
 /*

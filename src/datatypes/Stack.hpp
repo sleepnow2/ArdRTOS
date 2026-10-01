@@ -66,7 +66,7 @@ public:
         }
 
         if (insideDeadline) {
-            data[_num++] = data;
+            _data[_num++] = data;
             _lock.unlock();
             return true;
         }
@@ -78,7 +78,10 @@ public:
      * 
      * @return T the data off of the top of the stack if there is any, otherwise a copy of the last element is returned
      */
-    T pop();
+    T pop() {
+        LockGuard l(_lock);
+        return _data[--_num];
+    };
 
     /**
      * @brief peek at the top of the stack without changing it
@@ -93,9 +96,9 @@ public:
     /**
      * @brief returns the number of elements stored in the stack
      * 
-     * @return ITERATOR_TYPE the number of elements stored in the stack
+     * @return uint32_t the number of elements stored in the stack
      */
-    ITERATOR_TYPE size() {return _num;};
+    uint32_t size() {return _num;};
 
     /**
      * @brief returns whether the stack is empty or not
