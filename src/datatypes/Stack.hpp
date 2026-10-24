@@ -80,6 +80,11 @@ public:
      */
     T pop() {
         LockGuard l(_lock);
+        while(isEmpty()) {
+            _lock.unlock();
+            OS.yield();
+            _lock.lock();
+        }
         return _data[--_num];
     };
 
@@ -121,7 +126,6 @@ public:
      */
     void clear() {_num = 0;};
 
-    _Locking& getLock() {return _lock;}
     bool available() {return _lock.available();}
 };
 

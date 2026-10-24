@@ -43,7 +43,7 @@ public:
      * @param loop the loop function to use
      * @param stackSize how much memory you are going to use for this task
      */
-    static void addTask(osFuncCall loop, unsigned stackSize=0x40);
+    static void addTask(osFuncCall loop, unsigned stackSize = 0x40 + sizeof(jmp_buf));
 	
 	/**
      * @brief Create a task to be ran with the given argument. 
@@ -52,7 +52,7 @@ public:
 	 * @param argument a pointer to the argument to feed the function
      * @param stackSize how much memory you are going to use for this task
      */
-    static void addTask(osFuncCallArg loop, void *argument, unsigned stackSize=0x40);
+    static void addTask(osFuncCallArg loop, void *argument, unsigned stackSize = 0x40 + sizeof(jmp_buf));
 
     /**
      * @brief begins ArdRTOS after tasks are assigned
@@ -99,6 +99,18 @@ public:
 	 * @return uint8_t 
 	 */
 	static TaskID getTaskID();
+
+	/**
+	 * @brief Suspends the task in question until it is activated later
+	 * @param id The ID of the task to suspend
+	 */
+	void suspendTask(TaskID id);
+
+	/**
+	 * @brief Re-activates a previously suspended task
+	 * @param id The ID of the suspended task to activate
+	 */
+	void activateTask(TaskID id);
 
 
 	static void TEST_UTIL_CLEAN_OS();

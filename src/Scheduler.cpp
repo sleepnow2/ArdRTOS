@@ -2,8 +2,8 @@
  * @file scheduler.cpp
  * @author Alex Olson (sleepnow2@gmail.com)
  * @brief this contains the main kernel for ArdRTOS, the scheduler class and the ISR to operate the context switcher
- * @version 0.1
- * @date 2021-05-04
+ * @version 0.2
+ * @date 2026-10-23
  * 
  * @copyright MIT Copyright (c) 2022 Alex Olson. All rights reserved. details at bottom of file.
  * 
@@ -34,6 +34,14 @@ __attribute__((weak)) void loop() {
 
 Scheduler OS;
 
+/// @brief uses a bitfield to simplify this.
+struct _TASK_FLAG {
+    bool TASK_SLEEPING_MILLIS    : 1;
+    bool TASK_SLEEPING_MICROS    : 1;
+    bool TASK_SUSPENDED          : 1;
+};
+
+/// @brief The basic Task handler. Should not be exposed to users, as this 
 struct _TASK {
     // the function pointer to call
     osFuncCall functionHandler;
@@ -44,6 +52,15 @@ struct _TASK {
     unsigned stackSize;
     // the jump buffer used to store cpu context and restore execution.
     jmp_buf context;
+
+    // these are stored here, because it means we can now check these from "kernel space" AKA globals instead of needing to jump into a stack to read it.
+    // when we started sleeping (can be either ms or us)
+    unsigned long sleepStart;
+    // how long we are supposed to be sleeping (can be either ms or us)
+    unsigned long sleepDuration;
+
+    // a dense pack of different flags that signal
+    volatile _TASK_FLAG flags;
 } tasks[ARDRTOS_TASK_COUNT];
 
 // the current task
@@ -67,11 +84,41 @@ volatile bool busy = false;
 void Scheduler::yield() {
     //noInterrupts();
     if (setjmp(tasks[currentTaskID].context) == 0) {
-        if (currentTaskID == 0) {
-            currentTaskID = numberActiveTasks;
-        } else {
-            currentTaskID--;
-        }
+        // enter an infinite loop that checks for the next open task to enter 
+        while(true) {
+            // switch the current task ID
+            if (currentTaskID == 0) {
+                currentTaskID = numberActiveTasks;
+            } else {
+                currentTaskID--;
+            }
+
+            // get a pointer to the current task. This is a bit more efficient because currentTaskID is volatile.
+            auto *task = &tasks[currentTaskID];
+
+            // if this task is sleeping in millis, then check to see if we are done sleeping
+            if (task->flags.TASK_SLEEPING_MILLIS) {
+                // if we are done sleeping, then break out
+                if (millis() - task->sleepStart >= task->sleepDuration) {
+                    break;
+                }
+                // get to the next task. this one is still sleeping. 
+                continue;
+            }
+            
+            // same as above, just for micros.
+            if (task->flags.TASK_SLEEPING_MICROS) {
+                if (micros() - task->sleepStart >= task->sleepDuration) {
+                    break;
+                }
+                continue;
+            }
+
+            // if this task is suspended, skip to the next one.
+            if (task->flags.TASK_SUSPENDED) continue;
+        } // while(true);
+
+        // now that we found a valid task that is not waiting, jump into context and go!;
         longjmp(tasks[currentTaskID].context, 1);
     }
     //interrupts();
@@ -88,6 +135,7 @@ void Scheduler::yield() {
 */
 
 Scheduler::Scheduler() {
+
 }
 
 void Scheduler::addTask(osFuncCall loop, unsigned stackSize) {
@@ -167,17 +215,19 @@ void Scheduler::TEST_UTIL_CLEAN_OS() {
 */
 
 void Scheduler::delay(unsigned long ms) {
-    unsigned long calledTime = millis();
-    while (millis() - calledTime <= ms){
-        Scheduler::yield();
-    }
+    tasks[currentTaskID].sleepStart=millis();
+    tasks[currentTaskID].sleepDuration=ms;
+    tasks[currentTaskID].flags.TASK_SLEEPING_MILLIS = true;
+    Scheduler::yield();
 }
 
+
 void Scheduler::delayMicroseconds(unsigned long us) {
-    unsigned long calledTime = micros();
-    while (micros() - calledTime <= us){
-        Scheduler::yield();
-    }
+    // rewritten to have the checking data for 
+    tasks[currentTaskID].sleepStart=micros();
+    tasks[currentTaskID].sleepDuration=us;
+    tasks[currentTaskID].flags.TASK_SLEEPING_MICROS = true;
+    Scheduler::yield();
 }
 
 void Scheduler::delayUntil(unsigned long ms) {
@@ -193,10 +243,18 @@ TaskID Scheduler::getTaskID() {
     return currentTaskID;
 }
 
+void Scheduler::suspendTask(TaskID id) {
+    tasks[id].flags.TASK_SUSPENDED = true;
+}
+
+void Scheduler::activateTask(TaskID id) {
+    tasks[id].flags.TASK_SUSPENDED = false;
+}
+
 /**
  * MIT License
  * 
- * Copyright (c) 2022 Alex Olson
+ * Copyright (c) 2026 Alex Olson
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
