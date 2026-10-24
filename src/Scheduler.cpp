@@ -115,7 +115,10 @@ void Scheduler::yield() {
             }
 
             // if this task is suspended, skip to the next one.
-            if (task->flags.TASK_SUSPENDED) continue;
+            if (task->flags.TASK_SUSPENDED) 
+                continue;
+
+            break;
         } // while(true);
 
         // now that we found a valid task that is not waiting, jump into context and go!;
@@ -123,6 +126,7 @@ void Scheduler::yield() {
     }
     //interrupts();
 }
+
 
 /**
  ######   ######  ##     ## ######## ########  ##     ## ##       ######## ########
