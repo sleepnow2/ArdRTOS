@@ -13,18 +13,16 @@
 
 #include <setjmp.h>
 #include <alloca.h>
-
+#include "./datatypes/ThreadPool.h"
 /*
- .d8888b.   .d8888b.  888    888 8888888888 8888888b.  888     888 888      8888888888 8888888b.
-d88P  Y88b d88P  Y88b 888    888 888        888  "Y88b 888     888 888      888        888   Y88b
-Y88b.      888    888 888    888 888        888    888 888     888 888      888        888    888
- "Y888b.   888        8888888888 8888888    888    888 888     888 888      8888888    888   d88P
-    "Y88b. 888        888    888 888        888    888 888     888 888      888        8888888P"
-      "888 888    888 888    888 888        888    888 888     888 888      888        888 T88b
-Y88b  d88P Y88b  d88P 888    888 888        888  .d88P Y88b. .d88P 888      888        888  T88b
- "Y8888P"   "Y8888P"  888    888 8888888888 8888888P"   "Y88888P"  88888888 8888888888 888   T88b
-*/
+███████  ██████ ██   ██ ███████ ██████  ██    ██ ██      ███████ ██████
+██      ██      ██   ██ ██      ██   ██ ██    ██ ██      ██      ██   ██
+███████ ██      ███████ █████   ██   ██ ██    ██ ██      █████   ██████
+     ██ ██      ██   ██ ██      ██   ██ ██    ██ ██      ██      ██   ██
+███████  ██████ ██   ██ ███████ ██████   ██████  ███████ ███████ ██   ██
 
+
+*/
 /**
  * @brief This is the main interface with the kernel that most people will interact with. nothing too fancy.
  * 
@@ -42,17 +40,28 @@ public:
      * 
      * @param loop the loop function to use
      * @param stackSize how much memory you are going to use for this task
+	 * @result bool Whether the task was successfully added or not.
      */
-    static void addTask(osFuncCall loop, unsigned stackSize=0x40);
+    static bool addTask(osFuncCall loop, unsigned stackSize=0x40);
 	
 	/**
-     * @brief Create a task to be ran with the given argument. 
+     * @brief Create a task to be ran with the given argument
      * 
      * @param loop the loop function to use
 	 * @param argument a pointer to the argument to feed the function
      * @param stackSize how much memory you are going to use for this task
-     */
-    static void addTask(osFuncCallArg loop, void *argument, unsigned stackSize=0x40);
+     * @result bool Whether the task was successfully added or not
+	 */
+    static bool addTask(osFuncCallArg loop, void *argument, unsigned stackSize=0x40);
+
+	/**
+	 * @brief Create a task that operates a given thread pool together
+	 * 
+	 * @param pool the Threadpool to be used. Can take either a ThreadPool or a ThreadPoolArg
+	 * @param stackSize how much memory you are going to use for this task
+	 * @return bool Whether the task was successfully added or not
+	 *  */
+	static bool addPool(ThreadPool &pool,unsigned stackSize);
 
     /**
      * @brief begins ArdRTOS after tasks are assigned
@@ -104,6 +113,13 @@ public:
 	static void TEST_UTIL_CLEAN_OS();
 
 };
+
+/// @brief performs tasks required of the context switcher just as it enters kernel space.
+inline void _PRE_CONTEXT();
+
+/// @brief performs tasks required of the context switcher just before exiting kernel space.
+inline void _POST_CONTEXT();
+
 
 #endif /* SCHEDULER_H_ */
 

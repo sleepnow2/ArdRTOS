@@ -18,9 +18,13 @@
 #include <alloca.h>
 //! INCLUDES END
 
-__attribute__((weak)) void loop() {
-    // you can use loop as a task if you so desire, but it has to be here somewhere
-}
+#define WEAK __attribute__((weak))
+
+// you can use loop as a task if you so desire, but it has to be here somewhere
+WEAK void loop() {}
+WEAK void _PRE_CONTEXT() {}
+WEAK void _POST_CONTEXT() {}
+
 
 /**
  ######   ##        #######  ########     ###    ##        ######
@@ -34,6 +38,7 @@ __attribute__((weak)) void loop() {
 
 Scheduler OS;
 
+/// @brief the handle responsible for actually storing tasks
 struct _TASK {
     // the function pointer to call
     osFuncCall functionHandler;
@@ -44,6 +49,8 @@ struct _TASK {
     unsigned stackSize;
     // the jump buffer used to store cpu context and restore execution.
     jmp_buf context;
+
+    //! //////////////////////// FLAGS! /////////////////////////////
 } tasks[ARDRTOS_TASK_COUNT];
 
 // the current task
@@ -90,7 +97,8 @@ void Scheduler::yield() {
 Scheduler::Scheduler() {
 }
 
-void Scheduler::addTask(osFuncCall loop, unsigned stackSize) {
+bool Scheduler::addTask(osFuncCall loop, unsigned stackSize) {
+    if (numberActiveTasks >= ARDRTOS_TASK_COUNT) return false;
     // save the pointer to the function to loop over
     tasks[numberActiveTasks].functionHandler = loop;
     tasks[numberActiveTasks].argument = nullptr;
@@ -99,11 +107,19 @@ void Scheduler::addTask(osFuncCall loop, unsigned stackSize) {
 
     // increment numberActiveTasks
     numberActiveTasks++;
+    return true;
 }
 
-void Scheduler::addTask(osFuncCallArg loop, void *argument, unsigned stackSize) {
-    addTask((osFuncCall)loop, stackSize);
-    tasks[numberActiveTasks-1].argument = argument;
+bool Scheduler::addTask(osFuncCallArg loop, void *argument, unsigned stackSize) {
+    if (addTask((osFuncCall)loop, stackSize)) {
+        tasks[numberActiveTasks-1].argument = argument;
+        return true;
+    }
+    return false;
+}
+
+bool Scheduler::addPool(ThreadPool &pool,unsigned stackSize) {
+    return addTask(pool.runTasks, (void*)&pool, stackSize);
 }
 
 // NOOP is justified because alloca will be whisked away if we dont, and we dont want that.
@@ -189,8 +205,16 @@ void Scheduler::delayUntilMicroseconds(unsigned long us) {
 }
 
 TaskID Scheduler::getTaskID() {
-    // tasks start at index 0
-    return currentTaskID;
+    // if our task is a threadpool task, then we handle it a bit differently.
+    if ((void*)(tasks+currentTaskID) == ThreadPool::runTasks) {
+        // get the task it points to (stored as the argument)
+        // convert it into a thread pool pointer
+        // then call the function getTaskID() from that thread pool.
+        // this will return the spot in memory that we store that handle in, and use that as a taskID.
+        return ((ThreadPool*)tasks[currentTaskID].argument)->getTaskID();
+    }
+    // otherwise, just return the current task handle as an ID.
+    return tasks+currentTaskID;
 }
 
 /**

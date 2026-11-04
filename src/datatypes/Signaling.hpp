@@ -11,7 +11,7 @@
 #ifndef __DATATYPES_MUTEX_H__
 #define __DATATYPES_MUTEX_H__
 
-#define NULL_TASK 0xff
+#define NULL_TASK nullptr
 
 
 // hide it away from the users. they dont need to know.

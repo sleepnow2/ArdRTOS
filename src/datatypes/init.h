@@ -40,6 +40,7 @@ namespace __DATATYPES__HELPER__ {
 #include "datatypes/Signaling.hpp"
 #include "datatypes/Queue.hpp"
 #include "datatypes/Stack.hpp"
+#include "datatypes/ThreadPool.h"
 
 #endif
 

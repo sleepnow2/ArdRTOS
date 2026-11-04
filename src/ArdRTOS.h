@@ -24,9 +24,13 @@
 
 #include <Arduino.h>
 
+/// @brief a function pointer that takes nothing and returns nothing.
 typedef void (*osFuncCall)(void);
+/// @brief a function pointer that takes a void pointer and returns nothing.
+/// @note to make use of this, you will need to cast your argument to and from a void pointer,
 typedef void (*osFuncCallArg)(void*);
-typedef unsigned char TaskID;
+/// points to the data struct that contains it's running data. This is more of an identifier rather than actual usage.
+ typedef void* TaskID;
 
 #define NOOP __attribute__((optimize("O0")))
 
