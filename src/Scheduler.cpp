@@ -82,7 +82,7 @@ void Scheduler::yield() {
 Scheduler::Scheduler() {
 }
 
-void Scheduler::addTask(osFuncCallArg loop, void *argument, unsigned stackSize) {
+TaskID Scheduler::addTask(osFuncCallArg loop, void *argument, unsigned stackSize) {
     _TASK *next = new _TASK();
     next->functionHandler = (osFuncCall)loop;
     next->argument = argument;
@@ -99,14 +99,16 @@ void Scheduler::addTask(osFuncCallArg loop, void *argument, unsigned stackSize) 
         // and make the head point to the new guy.
         head->next = next;
     }
+    return next;
 }
 
-void Scheduler::addTask(osFuncCall loop, unsigned stackSize) {
-    addTask((osFuncCallArg)loop, nullptr, stackSize);
+[[nodiscard]]
+TaskID Scheduler::addTask(osFuncCall loop, unsigned stackSize) {
+    return addTask((osFuncCallArg)loop, nullptr, stackSize);
 }
 
 // NOOP is justified because alloca will be whisked away if we dont, and we dont want that.
-NOOP void Scheduler::begin() {
+__attribute__((optimize("O0"), noreturn)) void Scheduler::begin() {
     while(true) {
         // if this is our second time here, it means we jumped in from another context!
         // that other context could be the context switcher, or it could be 

@@ -28,7 +28,8 @@ typedef void (*osFuncCall)(void);
 typedef void (*osFuncCallArg)(void*);
 typedef void* TaskID;
 
-#define NOOP __attribute__((optimize("O0")))
+#define __ATTR_NOOP__ __attribute__((optimize("O0")))
+#define __ATTR_WEAK__ __attribute__((weak))
 
 //! INCLUDES BEGIN
 #include "Scheduler.h"

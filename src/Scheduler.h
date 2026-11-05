@@ -42,8 +42,10 @@ public:
      * 
      * @param loop the loop function to use
      * @param stackSize how much memory you are going to use for this task
-     */
-    static void addTask(osFuncCall loop, unsigned stackSize=0x40);
+     *
+	 * @result TaskID the ID of the task that was just added
+	 */
+    static TaskID addTask(osFuncCall loop, unsigned stackSize=0x40);
 	
 	/**
      * @brief Create a task to be ran with the given argument. 
@@ -51,8 +53,10 @@ public:
      * @param loop the loop function to use
 	 * @param argument a pointer to the argument to feed the function
      * @param stackSize how much memory you are going to use for this task
-     */
-    static void addTask(osFuncCallArg loop, void *argument, unsigned stackSize=0x40);
+     *
+	 * @result TaskID the ID of the task that was just added.
+	 */
+    static TaskID addTask(osFuncCallArg loop, void *argument, unsigned stackSize=0x40);
 
     /**
      * @brief begins ArdRTOS after tasks are assigned
