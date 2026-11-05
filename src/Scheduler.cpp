@@ -206,7 +206,7 @@ void Scheduler::delayUntilMicroseconds(unsigned long us) {
 
 TaskID Scheduler::getTaskID() {
     // if our task is a threadpool task, then we handle it a bit differently.
-    if ((void*)(tasks+currentTaskID) == ThreadPool::runTasks) {
+    if ((void*)(tasks+currentTaskID)->functionHandler == ThreadPool::runTasks) {
         // get the task it points to (stored as the argument)
         // convert it into a thread pool pointer
         // then call the function getTaskID() from that thread pool.

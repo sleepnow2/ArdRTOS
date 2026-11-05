@@ -27,7 +27,10 @@ _TASK_POOL::_TASK_POOL():
     delay(0),
     running(true), 
     one_shot(false) 
-{};
+{
+    continuous();
+    enable();
+};
 
 bool _TASK_POOL::isEmpty() {
     return task==nullptr;
@@ -60,9 +63,9 @@ void _TASK_POOL::run() {
     auto m = millis();
     
     // if 
-    if (m - last > delay) {
+    if (m - last >= delay) {
         // step the counter forward until we aren't scheduled to IMMEDIATELY fire again...
-        while (m - last > delay) last += delay;
+        while (m - last >= delay) last += delay;
 
         // if this task is supposed to be a one shot task, then disable it.
         if (one_shot) disable();
@@ -90,7 +93,7 @@ _TASK_POOL* ThreadPool::getTaskPoolHandle() {
     return tasks+current_task;
 }
 
-ThreadPool::ThreadPool(uint8_t task_num): task_num(task_num) {
+ThreadPool::ThreadPool(uint8_t task_num): current_task(0), task_num(task_num) {
     tasks = (_TASK_POOL*)calloc(task_num, sizeof(_TASK_POOL));
 }
 ThreadPool::~ThreadPool(){
@@ -101,16 +104,13 @@ bool ThreadPool::addTask(osFuncCallArg new_task, void* arg, unsigned long delay)
     if (current_task >= task_num) return false;
     tasks[current_task].setTask(new_task, arg);
     tasks[current_task].delay = delay;
+    tasks[current_task].enable();
     current_task += 1;
     return true;
 }
 
 bool ThreadPool::addTask(osFuncCall new_task, unsigned long delay) {
-    if (current_task >= task_num) return false;
-    tasks[current_task].setTask(new_task);
-    tasks[current_task].delay = delay;
-    current_task += 1;
-    return true;
+    return addTask((osFuncCallArg) new_task, nullptr, delay);
 }
 
 void ThreadPool::runTasks(void* _self) {

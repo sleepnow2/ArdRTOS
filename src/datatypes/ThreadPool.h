@@ -29,9 +29,9 @@ public:
     unsigned long delay;
 protected:
     // whether this task is supposed to be running
-    bool running : 1;
+    bool running = true;
     // whether this task is only supposed to be run once (maybe a digester of data)
-    bool one_shot : 1;
+    bool one_shot = false;
 public:
     _TASK_POOL();
 
