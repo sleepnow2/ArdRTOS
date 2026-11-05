@@ -26,7 +26,7 @@
 
 typedef void (*osFuncCall)(void);
 typedef void (*osFuncCallArg)(void*);
-typedef unsigned char TaskID;
+typedef void* TaskID;
 
 #define NOOP __attribute__((optimize("O0")))
 

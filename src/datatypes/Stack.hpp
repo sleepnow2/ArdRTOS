@@ -80,6 +80,11 @@ public:
      */
     T pop() {
         LockGuard l(_lock);
+        while (isEmpty()) {
+            _lock.unlock();
+            OS.yield();
+            _lock.lock();
+        }
         return _data[--_num];
     };
 

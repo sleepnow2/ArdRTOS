@@ -44,15 +44,11 @@ struct _TASK {
     unsigned stackSize;
     // the jump buffer used to store cpu context and restore execution.
     jmp_buf context;
-} tasks[ARDRTOS_TASK_COUNT];
+    // the next task in the circular array!
+    _TASK *next;
+};
 
-// the current task
-volatile uint8_t currentTaskID = 0;
-
-// the number of tasks
-volatile uint8_t numberActiveTasks = 0;
-
-volatile bool busy = false;
+_TASK *head = nullptr;
 
 /**
  ######   #######  ##    ## ######## ######## ##     ## ########     ######  ##      ## #### ########  ######  ##     ## ######## ########
@@ -66,13 +62,9 @@ volatile bool busy = false;
 
 void Scheduler::yield() {
     //noInterrupts();
-    if (setjmp(tasks[currentTaskID].context) == 0) {
-        if (currentTaskID == 0) {
-            currentTaskID = numberActiveTasks;
-        } else {
-            currentTaskID--;
-        }
-        longjmp(tasks[currentTaskID].context, 1);
+    if (setjmp(head->context) == 0) {
+        head = head->next;
+        longjmp(head->context, 1);
     }
     //interrupts();
 }
@@ -90,70 +82,77 @@ void Scheduler::yield() {
 Scheduler::Scheduler() {
 }
 
-void Scheduler::addTask(osFuncCall loop, unsigned stackSize) {
-    // save the pointer to the function to loop over
-    tasks[numberActiveTasks].functionHandler = loop;
-    tasks[numberActiveTasks].argument = nullptr;
-    // save how big you want the stack to be
-    tasks[numberActiveTasks].stackSize = stackSize + _JBLEN;
+void Scheduler::addTask(osFuncCallArg loop, void *argument, unsigned stackSize) {
+    _TASK *next = new _TASK();
+    next->functionHandler = (osFuncCall)loop;
+    next->argument = argument;
+    next->stackSize = stackSize + _JBLEN;
 
-    // increment numberActiveTasks
-    numberActiveTasks++;
+    // if this is the first task...
+    if (head == nullptr) {
+        // make it reference itself for the next context switch.
+        next->next = next;
+        head = next;
+    } else {
+        // make the new guy point to whoever is after the head
+        next->next = head->next;
+        // and make the head point to the new guy.
+        head->next = next;
+    }
 }
 
-void Scheduler::addTask(osFuncCallArg loop, void *argument, unsigned stackSize) {
-    addTask((osFuncCall)loop, stackSize);
-    tasks[numberActiveTasks-1].argument = argument;
+void Scheduler::addTask(osFuncCall loop, unsigned stackSize) {
+    addTask((osFuncCallArg)loop, nullptr, stackSize);
 }
 
 // NOOP is justified because alloca will be whisked away if we dont, and we dont want that.
 NOOP void Scheduler::begin() {
-    // transfer from describing how much space they want into 
-    for(currentTaskID = 0; currentTaskID < numberActiveTasks; currentTaskID++) {
-        // clear the previous task by how much space it wants.
-        // if you are the first task, obviously you dont need to clear nobody. 
-        if(currentTaskID != 0) {
-            // alloca is on the stack, not the heap.
-            alloca(tasks[currentTaskID-1].stackSize);
-        }
-
+    while(true) {
         // if this is our second time here, it means we jumped in from another context!
         // that other context could be the context switcher, or it could be 
-        if(setjmp(tasks[currentTaskID].context) == 1) {
+        if(setjmp(head->context) == 1) {
             interrupts();
-            if (tasks[currentTaskID].argument != nullptr){
+            if (head->argument != nullptr){
                 // slight optimization since currentTaskID will be the same for this task for the rest of time.
                 // turns out, this optimization runs into an issue with "C++26: Trivial infinite loops are no longer undefined behaviour"
                 // Thanks. sure. They are no longer undefined behavior, they are now just broken for me in very VERY niche tasks
                 // osFuncCallArg task = (osFuncCallArg)tasks[currentTaskID].functionHandler;
-                void* argument = tasks[currentTaskID].argument;
+                void* argument = head->argument;
                 while (true) {
-                    ((osFuncCallArg)tasks[currentTaskID].functionHandler)(argument);
+                    ((osFuncCallArg)head->functionHandler)(argument);
                     OS.yield();
                 }
             } else {
                 while (true) {
-                    tasks[currentTaskID].functionHandler();
+                    head->functionHandler();
                     OS.yield();
                 }
             }
         }
+        // clear the previous task by how much space it wants.
+        // alloca is on the stack, not the heap.
+        alloca(head->stackSize);
+        // use this as a flag to determine when we have already been here.
+        head->stackSize = 0;
+        // get the next task
+        head = head->next;
+        // if we have gone through and allocated all of them, start the OS.
+        if (head->stackSize == 0) longjmp(head->context, 1);
     }
-
-    // when we get done looping, this is an optimization.
-    // now, this is the index of the last active task.
-    numberActiveTasks = numberActiveTasks-1;
-    currentTaskID = 0;
-
-    // start the OS
-    longjmp(tasks[0].context, 1);
 }
 
 /// @brief Used to "reset" the OS when used in conjunction with Unity's TEST_PROTECT() and TEST_ABORT()
 void Scheduler::TEST_UTIL_CLEAN_OS() {
-    // clean off our count of tasks.
-    currentTaskID = 0;
-    numberActiveTasks = 0;
+    if (head == nullptr) return;
+    auto tail = head;
+    head = head->next;
+    while (head != tail) {
+        auto throat = head;
+        head=head->next;
+        free(throat);
+    }
+    free(head);
+    head = nullptr;
 }
 
 /*
@@ -190,7 +189,7 @@ void Scheduler::delayUntilMicroseconds(unsigned long us) {
 
 TaskID Scheduler::getTaskID() {
     // tasks start at index 0
-    return currentTaskID;
+    return head;
 }
 
 /**
