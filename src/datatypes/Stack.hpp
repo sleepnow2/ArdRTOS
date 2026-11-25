@@ -89,6 +89,21 @@ public:
     };
 
     /**
+     * @brief attempts to pop data off the stack immediately
+     * 
+     * @param &data The data that possibly gets popped off the stack. Gets modified when data is available
+     * @return bool Whether there was data to pop off the stack
+     */
+    bool popImmediate(T& data) {
+        if (_lock.lockImmediate()) {
+            data = _data[--_num];
+            _lock.unlock();
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * @brief peek at the top of the stack without changing it
      * 
      * @return T the data off of the top of the stack if there is any, otherwise a copy of the last element is returned

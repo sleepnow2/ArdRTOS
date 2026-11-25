@@ -116,6 +116,22 @@ public:
         return _data[next(_back)];
     }
 
+    /**
+     * @brief attempts to pop data off the queue immediately
+     * 
+     * @param &data The data that possibly gets popped off the queue. Gets modified when data is available
+     * @return bool Whether there was data to pop off the queue
+     */
+    bool popImmediate(T& data) {
+        if (_lock.lockImmediate()) {
+            data = _data[next(_back)];
+            _lock.unlock();
+            return true;
+        }
+        // did not acquire lock, no need to unlock.
+        return false;
+    }
+
     ITERATOR_TYPE size() {return _count;}
     bool isEmpty() {return _count == 0;}
     bool isFull() {return _count >= MAX_SIZE;}
