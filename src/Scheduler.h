@@ -117,10 +117,12 @@ public:
 };
 
 /// @brief performs tasks required of the context switcher just as it enters kernel space.
-inline void _PRE_CONTEXT();
+/// @brief This is primarily used to implement hardware specific tasks for preemption, or other tasks you may want it to do.
+/// @brief for example, you may want it to check to see if it is violating its maximum stack size... or maybe dissabling interrupts, or maybe setting or clearing certain registers.
+void _PRE_CONTEXT_SWITCH();
 
 /// @brief performs tasks required of the context switcher just before exiting kernel space.
-inline void _POST_CONTEXT();
+void _POST_CONTEXT_SWITCH();
 
 
 #endif /* SCHEDULER_H_ */

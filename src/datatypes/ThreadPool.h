@@ -56,7 +56,8 @@ public:
     void run();
 };
 
-/// @brief 
+/// @brief a pool of periodic threads that share a stack.
+/// @note These tasks will NEVER be running at the same time, as this is basically a really dumb task list.
 class ThreadPool {
 protected:
     _TASK_POOL *tasks;
@@ -74,20 +75,24 @@ public:
     /// @brief adds a new task into this threadpool 
     /// @param new_task the new task to add
     /// @param arg the argument that is supposed to be handed to the new task
-    /// @param delay how long tasks should delay for between execution
-    /// @return whether the task was added successfully or not
-    bool addTask(osFuncCallArg new_task, void* arg, unsigned long delay);
+    /// @param delay_ms how long tasks should delay for between execution in milliseconds
+    /// @return the handle of the new task, if it was created. NULL_TASK if unsuccessful
+    TaskID addTask(osFuncCallArg new_task, void* arg, unsigned long delay_ms);
 
     /// @brief adds a new task into this threadpool 
     /// @param new_task the new task to add
-    /// @param delay how long tasks should delay for between execution
-    /// @return whether the task was added successfully or not
-    bool addTask(osFuncCall new_task, unsigned long delay);
+    /// @param delay_ms how long tasks should delay for between execution in milliseconds
+    /// @return the handle of the new task, if it was created. NULL_TASK if unsuccessful
+    TaskID addTask(osFuncCall new_task, unsigned long delay_ms);
 
     /// @brief this is so it can take up the standard osFuncCallArg format, and can thus be run as a thread;
     /// @warning DO NOT USE THIS! it is a private task handled by the OS, but it needed to be public so the OS can use it.
+    /// @warning REALLY! DO NOT USE THIS!
     static void runTasks(void* _self);
 
+    /// @brief gets the taskID of the currently running thread in the threadpool.
+    /// @warning This is a helper function for the scheduler. Just use OS.getTaskID(), as that calls this anyways.
+    /// @return the ID of the currently running thread in the pool.
     TaskID getTaskID();
 };
 

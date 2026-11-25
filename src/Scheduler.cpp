@@ -22,8 +22,8 @@
 
 // you can use loop as a task if you so desire, but it has to be here somewhere
 WEAK void loop() {}
-WEAK void _PRE_CONTEXT() {}
-WEAK void _POST_CONTEXT() {}
+WEAK void _PRE_CONTEXT_SWITCH() {}
+WEAK void _POST_CONTEXT_SWITCH() {}
 
 
 /**
@@ -66,12 +66,12 @@ _TASK *head = nullptr;
 */
 
 void Scheduler::yield() {
-    //noInterrupts();
+    _PRE_CONTEXT_SWITCH();
     if (setjmp(head->context) == 0) {
         head = head->next;
         longjmp(head->context, 1);
     }
-    //interrupts();
+    _POST_CONTEXT_SWITCH();
 }
 
 /**
@@ -107,12 +107,11 @@ TaskID Scheduler::addTask(osFuncCallArg loop, void *argument, unsigned stackSize
     return next;
 }
 
-[[nodiscard]]
 TaskID Scheduler::addTask(osFuncCall loop, unsigned stackSize) {
     return addTask((osFuncCallArg)loop, nullptr, stackSize);
 }
 
-bool Scheduler::addPool(ThreadPool &pool,unsigned stackSize) {
+TaskID Scheduler::addPool(ThreadPool &pool,unsigned stackSize) {
     return addTask(pool.runTasks, (void*)&pool, stackSize);
 }
 
@@ -201,15 +200,15 @@ void Scheduler::delayUntilMicroseconds(unsigned long us) {
 
 TaskID Scheduler::getTaskID() {
     // if our task is a threadpool task, then we handle it a bit differently.
-    if ((void*)(tasks+currentTaskID)->functionHandler == ThreadPool::runTasks) {
+    if ((void*) head->functionHandler == ThreadPool::runTasks) {
         // get the task it points to (stored as the argument)
         // convert it into a thread pool pointer
         // then call the function getTaskID() from that thread pool.
         // this will return the spot in memory that we store that handle in, and use that as a taskID.
-        return ((ThreadPool*)tasks[currentTaskID].argument)->getTaskID();
+        return ((ThreadPool*)head->argument)->getTaskID();
     }
     // otherwise, just return the current task handle as an ID.
-    return tasks+currentTaskID;
+    return head;
 }
 
 /**
