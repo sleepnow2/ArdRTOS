@@ -30,8 +30,6 @@ public:
 protected:
     // whether this task is supposed to be running
     bool running = true;
-    // whether this task is only supposed to be run once (maybe a digester of data)
-    bool one_shot = false;
 public:
     _TASK_POOL();
 
@@ -47,11 +45,6 @@ public:
     /// @brief disables the task attached to this handle
     void disable();
 
-    /// @brief puts the task into one shot mode, meaning it is run once per time it is enabled.
-    void oneShot();
-    /// @brief puts the task into continuous mode, meaning it will never stop! (until told to)
-    void continuous();
-
     /// @brief checks the handle to see if it is time to run this function. if so, run it.
     void run();
 };
@@ -60,9 +53,10 @@ public:
 /// @note These tasks will NEVER be running at the same time, as this is basically a really dumb task list.
 class ThreadPool {
 protected:
-    _TASK_POOL *tasks;
     uint8_t task_num;
     uint8_t current_task;
+    _TASK_POOL *tasks;
+
 
     /// @brief returns the current task pool handle for manipulation.
     /// @return the current task pool handle for manipulation internally.

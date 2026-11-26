@@ -25,11 +25,8 @@ _TASK_POOL::_TASK_POOL():
     task(nullptr), 
     argument(nullptr),
     delay(0),
-    running(true), 
-    one_shot(false) 
+    running(true)
 {
-    continuous();
-    enable();
 };
 
 bool _TASK_POOL::isEmpty() {
@@ -49,18 +46,14 @@ void _TASK_POOL::enable() {running = true;}
 /// @brief disables the task attached to this handle
 void _TASK_POOL::disable() {running = false;}
 
-/// @brief puts the task into one shot mode, meaning it is run once per time it is enabled.
-void _TASK_POOL::oneShot() {one_shot = true;}
-/// @brief puts the task into continuous mode, meaning it will never stop! (until told to)
-void _TASK_POOL::continuous() {one_shot = false;}
-
 /// @brief checks the handle to see if it is time to run this function. if so, run it.
 void _TASK_POOL::run() {
+    if (task == nullptr) return;
     // are we supposed to be running?
     if (!running) return;
 
     // cache the current millisecond time.
-    auto m = millis();
+    volatile auto m = millis();
     
     // if 
     if (m - last >= delay) {
@@ -68,13 +61,11 @@ void _TASK_POOL::run() {
         // this copies the basic logic of delay_until.
         while (m - last >= delay) last += delay;
 
-        // if this task is supposed to be a one shot task, then disable it.
-        if (one_shot) disable();
-
         if (argument == nullptr) {
             task();
         } else {
-            (*(osFuncCallArg*)task)(argument);
+            //osFuncCallArg taskArg = (osFuncCallArg) task;
+            ((osFuncCallArg)task)(argument);
         }
     }
 }
@@ -108,7 +99,7 @@ TaskID ThreadPool::addTask(osFuncCallArg new_task, void* arg, unsigned long dela
     tasks[current_task].delay = delay_ms;
     tasks[current_task].enable();
     current_task += 1;
-    return tasks+current_task;
+    return tasks+current_task-1;
 }
 
 TaskID ThreadPool::addTask(osFuncCall new_task, unsigned long delay) {
