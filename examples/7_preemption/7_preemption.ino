@@ -2,10 +2,10 @@
  * @file 7_preemption.cpp
  * @author Alex Olson (sleepnow2@gmail.com)
  * @brief this example uses 1_blinking_args.cpp as a base to allow for users to build their own preemptive kernel.
- * @version 0.1
- * @date 2022-03-23
+ * @version 0.2
+ * @date 2026-11-25
  * 
- * @copyright MIT Copyright (c) 2022 Alex Olson. All rights reserved. details at bottom of file.
+ * @copyright MIT Copyright (c) 2026 Alex Olson. All rights reserved. details at bottom of file.
  * 
  *  Purpose:
  *      To demonstrate how to set up basic preemption using ArdRTOS.
@@ -14,18 +14,18 @@
  *      Basic understanding of hardware timers in C++
  *      
  *  Required hardware:
- *      3 leds
- *      (this example was built for the Arduino nano)
+ *      3 leds.
+ *      This example was built for the Arduino nano, or really any arduino that uses the  Atmel Atmega328P.
  */
 #include <ArdRTOS.h>
 #include <Arduino.h>
 
 /**
  * @brief Constructs the basic preemption context switcher.
- *      This is an advanced topic because it is highly dependant on the architecture of the microcontroller.
+ *      This is an advanced topic because it is highly dependant on the architecture of the micro controller.
  *      This example is built for the ATmega128 and ATmega328.
  *      Check your test board to see if it uses one of those boards to see if this example   
- *      Known microcontrollers that will not support preemption:
+ *      Known micro controllers that will not support preemption:
  *          ARM Coretex-M based boards
  *          (more will be added as they are discovered)
  * 
@@ -35,11 +35,28 @@ ISR(TIMER0_COMPA_vect) {
     OS.yield();
 }
 
+// performs this task just before context switching... mostly for your own implementation of preemption.
+// other uses of this hook might be:
+//      1. profiling your tasks by closing measuring times just before context switching.
+//      2. checking to see if you overflowed your stack buffer, by either checking the stack buffer directly, or having whitespace.
+//      3. 
+void _PRE_CONTEXT_SWITCH() {
+    // noInterrupts(); // you do not need to do this, as ISR's for AVR micro controllers already enter with no interrupts.
+    // this is more a demonstration to show you that these functions exist. 
+}
+
+// performs this task just after the context switch, and just before returning to regular service.
+void _POST_CONTEXT_SWITCH(){
+    // interrupts(); // once again, this is not necessary.
+    // in fact, it is actively detrimental as another ISR could fire INSIDE your ISR, thus eating more stack, and requiring more stack space for ALL tasks.
+}
+
+
 // to pass the inputs to the tasks.
 struct BlinkInputStruct{
-    unsigned char LED;
-    unsigned char GND;
-    unsigned long DELAY;
+    unsigned char LED; // what pin the positive lead on your LED is attached to
+    unsigned char GND; // what pin you are using for your negative lead on your LED.
+    unsigned long DELAY; // how fast the LED should blink (half duty cycle);
 };
 
 // structure initialization
@@ -100,7 +117,7 @@ void blink(void* bis_inp) {
 /**
  * MIT License
  * 
- * Copyright (c) 2022 Alex Olson
+ * Copyright (c) 2026 Alex Olson
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal

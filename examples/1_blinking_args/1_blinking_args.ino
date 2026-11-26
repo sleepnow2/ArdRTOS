@@ -41,9 +41,9 @@ void blink(void*);
  * 
  */
 void setup() {
-    OS.addTask(blink, &BIS1, 256);
-    OS.addTask(blink, &BIS2, 256);
-    OS.addTask(blink, &BIS3, 256);
+    OS.addTask(blink, &BIS1, 256); // make sure you have enough space on the stack for both your task... AND any ISR's that want to interrupt them!
+    OS.addTask(blink, &BIS2, 256); // 256 tends to be a pretty decent amount, but if you are crashing, go ahead and increase it.
+    OS.addTask(blink, &BIS3, 256); // Also, AVR dude will NOT show task memory usage in your compilation stats. Be weary.
     
     OS.begin();
     // program never gets here
